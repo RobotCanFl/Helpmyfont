@@ -247,7 +247,7 @@
         </div>
         <div>
           <div class="flex items-center gap-2">
-            <h1 class="text-sm sm:text-base font-semibold tracking-wide text-stone-800">練字帖生成器</h1>
+            <h1 class="text-sm sm:text-base font-semibold tracking-wide text-stone-800">練字帖生成器· (特愛辰宇落雁體版)</h1>
             <span class="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-stone-200/80 text-stone-700">
               A4 列印版
             </span>
@@ -521,7 +521,7 @@
         <section class="bg-white rounded-xl border border-[#e6e0d6] p-3.5 shadow-2xs space-y-3.5">
           <h2 class="text-xs font-semibold uppercase tracking-wider text-stone-700 flex items-center gap-1.5">
             <span class="w-1.5 h-3.5 rounded-full bg-stone-700"></span>
-            視覺微調與頁面設定
+            微調與頁面設定
           </h2>
 
           <!-- 格線顏色主題 -->
@@ -1268,8 +1268,8 @@
           footer.style.color = '#71717a';
           footer.style.paddingTop = '1.5mm';
 
-          //const footerLeft = document.createElement('span');
-         // footerLeft.textContent = `格距 ${state.cellSize}mm `;
+          const footerLeft = document.createElement('span');
+          footerLeft.textContent = `格距 ${state.cellSize}mm `;
 
           const footerRight = document.createElement('span');
           footerRight.textContent = state.showPageNum
