@@ -365,7 +365,7 @@
           <div>
             <label for="preset-select" class="block text-xs font-medium text-stone-600 mb-1">一鍵載入預設範文</label>
             <select id="preset-select" class="w-full rounded-lg border border-[#d6cfc4] bg-[#fcfbf9] px-3 py-2 text-xs sm:text-sm text-stone-800 focus:border-stone-500 focus:outline-none transition">
-              <option value="zhuanfeng" selected>【撰風散文選（預設）】生活的火花與文字</option>
+              <option value="zhuanfeng" selected>【撰風散文選】生活的火花與文字（預設）</option>
               <option value="yongzi">【晚遊六橋待月記】</option>
               <option value="tangshi">【左忠毅公軼事】</option>
               <option value="xinjing">【勸和論】</option>
@@ -1268,8 +1268,8 @@
           footer.style.color = '#71717a';
           footer.style.paddingTop = '1.5mm';
 
-          const footerLeft = document.createElement('span');
-          footerLeft.textContent = `格距 ${state.cellSize}mm `;
+          //const footerLeft = document.createElement('span');
+         // footerLeft.textContent = `格距 ${state.cellSize}mm `;
 
           const footerRight = document.createElement('span');
           footerRight.textContent = state.showPageNum
@@ -1563,8 +1563,8 @@
           ctx.font = `400 ${mm(2.8)}px "Noto Sans TC", sans-serif`;
           ctx.textBaseline = 'top';
           ctx.textAlign = 'left';
-          ctx.fillText(
-            `格距 ${state.cellSize}mm `,
+          //ctx.fillText(
+           // `格距 ${state.cellSize}mm `,
             mm(padLR),
             mm(footerY)
           );
