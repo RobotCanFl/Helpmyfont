@@ -366,9 +366,9 @@
             <label for="preset-select" class="block text-xs font-medium text-stone-600 mb-1">一鍵載入預設範文</label>
             <select id="preset-select" class="w-full rounded-lg border border-[#d6cfc4] bg-[#fcfbf9] px-3 py-2 text-xs sm:text-sm text-stone-800 focus:border-stone-500 focus:outline-none transition">
               <option value="zhuanfeng" selected>【撰風散文選（預設）】生活的火花與文字</option>
-              <option value="yongzi">【永字八法與常用字】經典結構練習</option>
-              <option value="tangshi">【經典唐詩選】李白 · 靜夜思</option>
-              <option value="xinjing">【心經節錄】般若波羅蜜多心經</option>
+              <option value="yongzi">【晚遊六橋待月記</option>
+              <option value="tangshi">【左忠毅公軼事</option>
+              <option value="xinjing">【勸和論</option>
             </select>
           </div>
 
@@ -1268,8 +1268,8 @@
           footer.style.color = '#71717a';
           footer.style.paddingTop = '1.5mm';
 
-          //const footerLeft = document.createElement('span');
-          //footerLeft.textContent = `格距 ${state.cellSize}mm · 靜心運筆，注重間架平衡`;
+          const footerLeft = document.createElement('span');
+          footerLeft.textContent = `格距 ${state.cellSize}mm · 靜心運筆，注重間架平衡`;
 
           const footerRight = document.createElement('span');
           footerRight.textContent = state.showPageNum
@@ -1558,13 +1558,13 @@
             cursorY += cellSize + pageData.rowGap;
           });
 
-          //const footerY = pageHMm - padBottom - 2.5;
-          //ctx.fillStyle = '#71717a';
-          //ctx.font = `400 ${mm(2.8)}px "Noto Sans TC", sans-serif`;
-          //ctx.textBaseline = 'top';
-          //ctx.textAlign = 'left';
-         // ctx.fillText(
-          //  `格距 ${state.cellSize}mm · 靜心運筆，注重間架平衡`,
+          const footerY = pageHMm - padBottom - 2.5;
+          ctx.fillStyle = '#71717a';
+          ctx.font = `400 ${mm(2.8)}px "Noto Sans TC", sans-serif`;
+          ctx.textBaseline = 'top';
+          ctx.textAlign = 'left';
+          ctx.fillText(
+            `格距 ${state.cellSize}mm · 靜心運筆，注重間架平衡`,
             mm(padLR),
             mm(footerY)
           );
