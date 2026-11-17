@@ -1268,8 +1268,8 @@
           footer.style.color = '#71717a';
           footer.style.paddingTop = '1.5mm';
 
-          //const footerLeft = document.createElement('span');
-          //footerLeft.textContent = `格距 ${state.cellSize}mm · 靜心運筆，注重間架平衡`;
+          const footerLeft = document.createElement('span');
+          footerLeft.textContent = `格距 ${state.cellSize}mm · 靜心運筆，注重間架平衡`;
 
           const footerRight = document.createElement('span');
           footerRight.textContent = state.showPageNum
@@ -1563,8 +1563,8 @@
           ctx.font = `400 ${mm(2.8)}px "Noto Sans TC", sans-serif`;
           ctx.textBaseline = 'top';
           ctx.textAlign = 'left';
-          //ctx.fillText(
-           // `格距 ${state.cellSize}mm · 靜心運筆，注重間架平衡`,
+          ctx.fillText(
+            `格距 ${state.cellSize}mm · 靜心運筆，注重間架平衡`,
             mm(padLR),
             mm(footerY)
           );
