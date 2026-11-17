@@ -1269,7 +1269,7 @@
           footer.style.paddingTop = '1.5mm';
 
           const footerLeft = document.createElement('span');
-          footerLeft.textContent = `格距 ${state.cellSize}mm · 靜心運筆，注重間架平衡`;
+          footerLeft.textContent = `格距 ${state.cellSize}mm `;
 
           const footerRight = document.createElement('span');
           footerRight.textContent = state.showPageNum
@@ -1564,7 +1564,7 @@
           ctx.textBaseline = 'top';
           ctx.textAlign = 'left';
           ctx.fillText(
-            `格距 ${state.cellSize}mm · 靜心運筆，注重間架平衡`,
+            `格距 ${state.cellSize}mm `,
             mm(padLR),
             mm(footerY)
           );
