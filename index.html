@@ -16,8 +16,12 @@
   <style>
     /* 載入辰宇落雁體 Thin (ChenYuluoyan) */
     @font-face {
-  font-family: 'ChenYuluoyan-2.0-Thin';
-  src: url('./ChenYuluoyan-2.0-Thin.ttf') format('truetype');
+      font-family: 'ChenYuluoyan-Thin';
+      src:
+        local('ChenYuluoyan-Thin'),
+        local('ChenYuluoyan Thin'),
+        local('辰宇落雁體 Thin'),
+        url('./ChenYuluoyan-2.0-Thin.ttf') format('truetype');
       font-weight: 100 400;
       font-style: normal;
       font-display: swap;
@@ -308,14 +312,14 @@
 
         <!-- 區塊 1：字體系統 -->
         <section class="bg-white rounded-xl border border-[#e6e0d6] p-3.5 shadow-2xs space-y-3">
-          <div class="flex items-center justify-between">
-            <h2 class="text-xs font-semibold uppercase tracking-wider text-stone-700 flex items-center gap-1.5">
+          <div class="flex items-center justify-between gap-2">
+            <h2 class="text-xs font-semibold uppercase tracking-wider text-stone-700 flex items-center gap-1.5 shrink-0">
               <span class="w-1.5 h-3.5 rounded-full bg-[#b93829]"></span>
               字體系統設定
             </h2>
-            <span id="font-status-badge" class="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200/70">
+            <span id="font-status-badge" class="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200/70 truncate">
               <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
-              字體載入中
+              偵測字體中
             </span>
           </div>
 
@@ -334,7 +338,7 @@
           <div class="pt-1 border-t border-stone-100">
             <div class="flex items-center justify-between gap-2">
               <div class="text-[11px] text-stone-500 leading-snug">
-                支援匯入本機字體檔（<code class="text-stone-700">.ttf / .otf / .woff2</code>）
+                直接匯入本機字體檔（<code class="text-stone-700">.ttf / .otf / .woff2</code>）
               </div>
               <label for="custom-font-input" class="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200/80 text-stone-700 text-xs font-medium cursor-pointer transition border border-stone-200/80">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -665,7 +669,7 @@
       };
 
       const FONT_STACKS = {
-        chenyuluoyan: "'ChenYuluoyan', 'LXGW WenKai TC', 'BiauKai', 'DFKai-SB', 'Kaiti TC', 'STKaiti', 'KaiTi', serif",
+        chenyuluoyan: "'ChenYuluoyan-Thin', 'ChenYuluoyan', 'LXGW WenKai TC', 'BiauKai', 'DFKai-SB', 'Kaiti TC', 'STKaiti', 'KaiTi', serif",
         lxgw: "'LXGW WenKai TC', 'BiauKai', 'DFKai-SB', 'Kaiti TC', 'STKaiti', 'KaiTi', serif",
         biaukai: "'BiauKai', 'DFKai-SB', 'Kaiti TC', 'STKaiti', 'KaiTi', 'Noto Serif TC', serif",
         notoserif: "'Noto Serif TC', 'PMingLiU', 'MingLiU', serif",
@@ -790,8 +794,23 @@
         return FONT_STACKS[state.fontKey] || FONT_STACKS.chenyuluoyan;
       }
 
+      // 附帶逾時限制的字體載入，避免無效路徑或慢速網路導致無限等待
+      function loadFontWithTimeout(fontDescriptor, timeoutMs = 2000) {
+        if (!document.fonts || !document.fonts.load) {
+          return Promise.resolve([]);
+        }
+        return Promise.race([
+          document.fonts.load(fontDescriptor),
+          new Promise((resolve) => setTimeout(() => resolve([]), timeoutMs))
+        ]);
+      }
+
+      let fontStatusToken = 0;
+
       // 監控字體載入狀態
       function updateFontStatus() {
+        const token = ++fontStatusToken;
+
         if (state.customFonts[state.fontKey]) {
           el.fontStatusBadge.className =
             'inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/70';
@@ -808,37 +827,53 @@
 
         const fontCheckName =
           state.fontKey === 'chenyuluoyan'
-            ? 'ChenYuluoyan'
+            ? 'ChenYuluoyan-Thin'
             : state.fontKey === 'lxgw'
             ? 'LXGW WenKai TC'
             : state.fontKey === 'notoserif'
             ? 'Noto Serif TC'
             : 'Noto Sans TC';
 
+        // 若字體已在快取或系統中就緒，立即顯示完成，不閃爍「載入中」
+        if (document.fonts && document.fonts.check && document.fonts.check(`24px "${fontCheckName}"`)) {
+          const readyLabel = state.fontKey === 'chenyuluoyan' ? '本地字體就緒' : '字體已就緒';
+          el.fontStatusBadge.className =
+            'inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/70';
+          el.fontStatusBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>${readyLabel}`;
+          return;
+        }
+
         el.fontStatusBadge.className =
           'inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200/70';
-        el.fontStatusBadge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>字體載入中';
+        el.fontStatusBadge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>偵測字體中';
 
-        if (document.fonts && document.fonts.load) {
-          document.fonts
-            .load(`24px "${fontCheckName}"`)
-            .then((loaded) => {
-              if (loaded && loaded.length > 0) {
-                el.fontStatusBadge.className =
-                  'inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/70';
-                el.fontStatusBadge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>雲端字體就緒';
-              } else {
-                el.fontStatusBadge.className =
-                  'inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-stone-100 text-stone-600 border border-stone-200';
-                el.fontStatusBadge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-stone-400"></span>已啟用備援字體';
-              }
-            })
-            .catch(() => {
+        // 本機 file:// 開啟時瀏覽器常會阻擋相對路徑字型，設定較短逾時（1.2 秒）立即提示上傳
+        const timeoutMs =
+          state.fontKey === 'chenyuluoyan' && window.location.protocol === 'file:' ? 1200 : 2500;
+
+        loadFontWithTimeout(`24px "${fontCheckName}"`, timeoutMs)
+          .then((loaded) => {
+            if (token !== fontStatusToken) return;
+            if (loaded && loaded.length > 0) {
+              const readyLabel = state.fontKey === 'chenyuluoyan' ? '本地字體就緒' : '雲端字體就緒';
+              el.fontStatusBadge.className =
+                'inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/70';
+              el.fontStatusBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>${readyLabel}`;
+              renderWorkbook();
+            } else {
+              const fallbackLabel =
+                state.fontKey === 'chenyuluoyan' ? '請點下方「上傳字體」' : '已啟用備援字體';
               el.fontStatusBadge.className =
                 'inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-stone-100 text-stone-600 border border-stone-200';
-              el.fontStatusBadge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-stone-400"></span>已啟用備援字體';
-            });
-        }
+              el.fontStatusBadge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-stone-400"></span>${fallbackLabel}`;
+            }
+          })
+          .catch(() => {
+            if (token !== fontStatusToken) return;
+            el.fontStatusBadge.className =
+              'inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-stone-100 text-stone-600 border border-stone-200';
+            el.fontStatusBadge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-stone-400"></span>已啟用備援字體';
+          });
       }
 
       // 文字清理與分字
@@ -963,7 +998,6 @@
         const nextPageRowsCap = Math.max(1, Math.floor(nextPageAvailH / rowPitch));
 
         // 依模式建立所有「練習列 (rows)」
-        // 每列格式: { cells: [ { char: string, role: 'model' | 'trace' | 'blank' } ] }
         const allRows = [];
 
         if (state.layoutMode === 'paragraph') {
@@ -978,7 +1012,6 @@
               allRows.push({ cells, isCopyRow: false });
             }
           } else {
-            // 將文字切分為每 colsPerRow 一組
             const chunks = [];
             if (chars.length === 0) {
               for (let r = 0; r < firstPageRowsCap; r++) {
@@ -993,7 +1026,6 @@
             }
 
             chunks.forEach((chunk) => {
-              // 描紅行
               allRows.push({
                 cells: chunk.map((ch) => ({
                   char: ch,
@@ -1002,7 +1034,6 @@
                 isCopyRow: false
               });
 
-              // 若為「隔行描紅＋臨寫」，緊接一列空白臨寫格
               if (state.paraRhythm === 'alternate') {
                 allRows.push({
                   cells: new Array(colsPerRow).fill(null).map(() => ({
@@ -1042,7 +1073,6 @@
 
         while (cursor < allRows.length || pages.length === 0) {
           let cap = pageIdx === 0 ? firstPageRowsCap : nextPageRowsCap;
-          // 在隔行描紅＋臨寫模式下，盡量保持偶數行（描紅＋臨寫成對），避免臨寫行孤立在次頁頂端
           if (
             state.layoutMode === 'paragraph' &&
             state.paraRhythm === 'alternate' &&
@@ -1086,7 +1116,6 @@
         const traceAlpha = (state.traceOpacity / 100).toFixed(2);
         const modelAlpha = (state.modelOpacity / 100).toFixed(2);
 
-        // 預先產生一般格與列尾格的 SVG 背景 URI
         const normalCellBg = buildCellSvgDataUri(state.gridStyle, state.colorTheme, false);
         const lastCellBg = buildCellSvgDataUri(state.gridStyle, state.colorTheme, true);
 
@@ -1097,7 +1126,6 @@
           sheet.className = `a4-sheet ${state.orientation}`;
           sheet.dataset.page = String(pageData.pageNumber);
 
-          // 頂部區域（頁首 + 格子主體）
           const topBlock = document.createElement('div');
           topBlock.className = 'flex flex-col';
 
@@ -1147,7 +1175,6 @@
               header.appendChild(sub);
             }
           } else {
-            // 次頁精簡眉標
             const compactRow = document.createElement('div');
             compactRow.className = 'flex items-center justify-between';
             const leftSpan = document.createElement('span');
@@ -1259,7 +1286,6 @@
         el.pagesStage.innerHTML = '';
         el.pagesStage.appendChild(fragment);
 
-        // 更新統計列與 PNG 匯出頁碼選單
         el.statsBar.textContent = `共 ${pages.length} 頁 · ${totalChars} 字 · 每行 ${colsPerRow} 格 × 首頁 ${firstPageRowsCap} 行`;
 
         const prevSelectedPage = parseInt(el.pngPageSelect.value, 10) || 1;
@@ -1272,14 +1298,12 @@
         });
         el.pngPageSelect.value = String(Math.min(prevSelectedPage, pages.length));
 
-        // 同步更新縮放外框尺寸，避免縮小時下方出現大塊空白
         requestAnimationFrame(syncZoomWrapperBounds);
       }
 
       // ==================== 8. 預覽縮放控制 ====================
       function syncZoomWrapperBounds() {
         const stageRect = el.pagesStage.getBoundingClientRect();
-        // getBoundingClientRect() 已包含 transform: scale() 後的實際視覺寬高
         el.zoomWrapper.style.width = `${Math.ceil(stageRect.width)}px`;
         el.zoomWrapper.style.height = `${Math.ceil(stageRect.height)}px`;
       }
@@ -1298,7 +1322,6 @@
         const containerW = el.previewScrollContainer.clientWidth;
         if (!containerW) return;
         const availableW = Math.max(260, containerW - 48);
-        // 1mm ≈ 3.7795px
         const sheetPxW = (state.orientation === 'portrait' ? 210 : 297) * 3.7795;
         const idealZoom = Math.min(1.05, Math.max(0.38, availableW / sheetPxW));
         setZoom(idealZoom);
@@ -1314,14 +1337,16 @@
 
         try {
           if (document.fonts && document.fonts.ready) {
-            await document.fonts.ready;
+            await Promise.race([
+              document.fonts.ready,
+              new Promise((resolve) => setTimeout(resolve, 1500))
+            ]);
           }
 
           const isPortrait = state.orientation === 'portrait';
           const pageWMm = isPortrait ? 210 : 297;
           const pageHMm = isPortrait ? 297 : 210;
 
-          // 300 DPI 換算：1 mm = 11.811 px (2480 x 3508 px)
           const pxPerMm = 2480 / 210;
           const canvas = document.createElement('canvas');
           canvas.width = Math.round(pageWMm * pxPerMm);
@@ -1330,7 +1355,6 @@
           const ctx = canvas.getContext('2d');
           const mm = (val) => val * pxPerMm;
 
-          // 1. 純白紙張底色
           ctx.fillStyle = '#ffffff';
           ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -1344,7 +1368,6 @@
 
           let cursorY = padTop;
 
-          // 2. 繪製頁首
           if (pageData.isFirstPage) {
             ctx.fillStyle = theme.header;
             ctx.font = `400 ${mm(5.3)}px ${fontFamily}`;
@@ -1388,7 +1411,6 @@
             cursorY += 5.5;
           }
 
-          // 頁首分隔線
           ctx.strokeStyle = theme.header;
           ctx.lineWidth = mm(0.42);
           ctx.beginPath();
@@ -1397,7 +1419,6 @@
           ctx.stroke();
           cursorY += 3.2;
 
-          // 3. 若有參考全文框，繪製參考全文
           if (pageData.showRefBox) {
             const refText = state.text.trim();
             const boxPad = 2.8;
@@ -1441,7 +1462,6 @@
             cursorY += boxH + 3.0;
           }
 
-          // 4. 繪製每一列練字格與文字
           const cellSize = state.cellSize;
           const rowTotalW = pageData.colsPerRow * cellSize;
           const startX = (pageWMm - rowTotalW) / 2;
@@ -1452,7 +1472,6 @@
               const x = startX + cIdx * cellSize;
               const y = cursorY;
 
-              // 繪製格線
               if (state.gridStyle !== 'none') {
                 ctx.save();
                 if (state.gridStyle === 'lined') {
@@ -1474,7 +1493,6 @@
                   ctx.lineTo(mm(x + cellSize), mm(y + cellSize / 2));
                   ctx.stroke();
                 } else {
-                  // 輔助虛線
                   ctx.strokeStyle = theme.guide;
                   ctx.lineWidth = mm(0.18);
                   ctx.setLineDash([mm(0.75), mm(0.65)]);
@@ -1510,7 +1528,6 @@
                   }
                   ctx.stroke();
 
-                  // 外框實線
                   ctx.strokeStyle = theme.primary;
                   ctx.lineWidth = mm(0.32);
                   ctx.setLineDash([]);
@@ -1519,7 +1536,6 @@
                 ctx.restore();
               }
 
-              // 繪製文字
               if (cellObj.char) {
                 ctx.save();
                 ctx.globalAlpha =
@@ -1542,7 +1558,6 @@
             cursorY += cellSize + pageData.rowGap;
           });
 
-          // 5. 繪製頁尾
           const footerY = pageHMm - padBottom - 2.5;
           ctx.fillStyle = '#71717a';
           ctx.font = `400 ${mm(2.8)}px "Noto Sans TC", sans-serif`;
@@ -1563,7 +1578,6 @@
             );
           }
 
-          // 下載檔案
           const dataUrl = canvas.toDataURL('image/png');
           const link = document.createElement('a');
           link.download = `硬筆字帖_第${pageNumber}頁.png`;
@@ -1583,14 +1597,12 @@
 
       // ==================== 10. 事件綁定與互動邏輯 ====================
       function bindEvents() {
-        // 字體切換
         el.fontSelect.addEventListener('change', (e) => {
           state.fontKey = e.target.value;
           updateFontStatus();
           renderWorkbook();
         });
 
-        // 本地字體上傳
         el.customFontInput.addEventListener('change', async (e) => {
           const file = e.target.files && e.target.files[0];
           if (!file) return;
@@ -1607,7 +1619,6 @@
             state.customFonts[key] = { name: file.name, family: safeFamily };
             state.fontKey = key;
 
-            // 加入或更新下拉選單選項
             const opt = document.createElement('option');
             opt.value = key;
             opt.textContent = `自訂字體 · ${file.name}`;
@@ -1628,7 +1639,6 @@
           }
         });
 
-        // 預設範文載入
         el.presetSelect.addEventListener('change', (e) => {
           const preset = PRESETS[e.target.value];
           if (!preset) return;
@@ -1640,7 +1650,6 @@
           showToast('已載入預設範文');
         });
 
-        // 自由輸入練字內容
         el.practiceText.addEventListener('input', (e) => {
           state.text = e.target.value;
           renderWorkbook();
@@ -1653,7 +1662,6 @@
           showToast('已清空文字，切換為空白練字格');
         });
 
-        // 標點符號處理選項
         document.querySelectorAll('input[name="punct-mode"]').forEach((radio) => {
           radio.addEventListener('change', (e) => {
             state.punctMode = e.target.value;
@@ -1661,7 +1669,6 @@
           });
         });
 
-        // 6 種格線樣式切換
         el.gridStyleBtns.forEach((btn) => {
           btn.addEventListener('click', () => {
             el.gridStyleBtns.forEach((b) => {
@@ -1676,7 +1683,6 @@
           });
         });
 
-        // 雙排版模式切換
         el.modeParagraphBtn.addEventListener('click', () => {
           state.layoutMode = 'paragraph';
           el.modeParagraphBtn.className =
@@ -1699,7 +1705,6 @@
           renderWorkbook();
         });
 
-        // 段落模式節奏選項
         document.querySelectorAll('input[name="para-rhythm"]').forEach((radio) => {
           radio.addEventListener('change', (e) => {
             state.paraRhythm = e.target.value;
@@ -1707,7 +1712,6 @@
           });
         });
 
-        // 單字精練描紅格數滑桿
         el.singleTraceSlider.addEventListener('input', (e) => {
           const val = parseInt(e.target.value, 10);
           state.singleTraceCount = val;
@@ -1716,7 +1720,6 @@
           renderWorkbook();
         });
 
-        // 格線顏色色票
         el.colorSwatches.forEach((swatch) => {
           swatch.addEventListener('click', () => {
             el.colorSwatches.forEach((s) => {
@@ -1732,7 +1735,6 @@
           });
         });
 
-        // 尺寸與透明度滑桿
         el.cellSizeSlider.addEventListener('input', (e) => {
           state.cellSize = parseFloat(e.target.value);
           el.cellSizeVal.textContent = `${state.cellSize.toFixed(1)} mm`;
@@ -1757,7 +1759,6 @@
           renderWorkbook();
         });
 
-        // A4 直式 / 橫式切換
         el.orientPortraitBtn.addEventListener('click', () => {
           state.orientation = 'portrait';
           el.orientPortraitBtn.className =
@@ -1780,7 +1781,6 @@
           if (window.innerWidth < 1024) fitZoomToContainer();
         });
 
-        // 頁首標題與頁碼設定
         el.headerTitleInput.addEventListener('input', (e) => {
           state.headerTitle = e.target.value;
           renderWorkbook();
@@ -1801,7 +1801,6 @@
           renderWorkbook();
         });
 
-        // 縮放控制（桌面與行動版）
         el.zoomOutBtn.addEventListener('click', () => setZoom(state.zoom - 0.1));
         el.zoomInBtn.addEventListener('click', () => setZoom(state.zoom + 0.1));
         el.zoomFitBtn.addEventListener('click', fitZoomToContainer);
@@ -1812,7 +1811,6 @@
           el.mobileZoomFit.addEventListener('click', fitZoomToContainer);
         }
 
-        // 行動版「參數設定 / 字帖預覽」切換
         el.mobileTabSettings.addEventListener('click', () => {
           el.controlSidebar.classList.remove('hidden');
           el.previewPane.classList.add('hidden');
@@ -1834,18 +1832,15 @@
           requestAnimationFrame(fitZoomToContainer);
         });
 
-        // 列印 / 另存 PDF
         el.printPdfBtn.addEventListener('click', () => {
           window.print();
         });
 
-        // 匯出當前頁為 PNG
         el.exportPngBtn.addEventListener('click', () => {
           const pageNum = parseInt(el.pngPageSelect.value, 10) || 1;
           exportPageAsPng(pageNum);
         });
 
-        // 視窗尺寸改變時自動調整行動版縮放
         window.addEventListener('resize', () => {
           if (window.innerWidth >= 1024) {
             el.controlSidebar.classList.remove('hidden');
@@ -1862,7 +1857,6 @@
         updateFontStatus();
         renderWorkbook();
 
-        // 依螢幕寬度設定初始最佳縮放比例
         if (window.innerWidth < 1280) {
           fitZoomToContainer();
         } else {
