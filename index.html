@@ -1,0 +1,1881 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>硬筆字帖產生器 · 辰宇落雁體與多樣格線工作室</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Google Fonts: 霞鶩文楷 TC、思源宋體、思源黑體、Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=LXGW+WenKai+TC:wght@300;400;700&family=Noto+Sans+TC:wght@300;400;500;700&family=Noto+Serif+TC:wght@300;400;600&display=swap" rel="stylesheet" />
+
+  <style>
+    /* 載入辰宇落雁體 Thin (ChenYuluoyan) */
+    @font-face {
+      font-family: 'ChenYuluoyan';
+      src: url('https://cdn.jsdelivr.net/gh/Chenyu-otf/chenyuluoyan_thin@main/ChenYuluoyan-Thin.ttf') format('truetype');
+      font-weight: 100 400;
+      font-style: normal;
+      font-display: swap;
+    }
+
+    :root {
+      --desk-bg: #e7e3db;
+      --panel-bg: #faf8f5;
+      --panel-border: #e2dcd2;
+      --ink-primary: #1c1917;
+      --ink-secondary: #57534e;
+      --accent-vermilion: #b93829;
+      --accent-vermilion-hover: #992b1e;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Inter', 'Noto Sans TC', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--desk-bg);
+      color: var(--ink-primary);
+      overflow-x: hidden;
+    }
+
+    /* 自訂捲軸質感 */
+    ::-webkit-scrollbar {
+      width: 7px;
+      height: 7px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #c7c0b5;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #a89f91;
+    }
+
+    /* 自訂滑桿樣式 */
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 5px;
+      background: #ded8ce;
+      border-radius: 999px;
+      outline: none;
+      cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #334155;
+      border: 2px solid #ffffff;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+      transition: transform 0.15s ease, background-color 0.15s ease;
+    }
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.12);
+      background: var(--accent-vermilion);
+    }
+    input[type="range"]::-moz-range-thumb {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #334155;
+      border: 2px solid #ffffff;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+      cursor: pointer;
+    }
+
+    /* 預覽區工作檯背景微紋理 */
+    .studio-desk {
+      background-color: #e6e2da;
+      background-image: radial-gradient(#cfc8bc 0.75px, transparent 0.75px);
+      background-size: 16px 16px;
+    }
+
+    /* A4 紙張實體尺寸與擬真陰影 */
+    .a4-sheet {
+      background-color: #ffffff;
+      box-shadow:
+        0 14px 36px -6px rgba(28, 25, 23, 0.14),
+        0 4px 12px -2px rgba(28, 25, 23, 0.08),
+        0 0 0 1px rgba(28, 25, 23, 0.06);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+      flex-shrink: 0;
+      transition: width 0.2s ease, height 0.2s ease;
+    }
+
+    .a4-sheet.portrait {
+      width: 210mm;
+      height: 297mm;
+      padding: 13mm 14mm 10mm 14mm;
+    }
+
+    .a4-sheet.landscape {
+      width: 297mm;
+      height: 210mm;
+      padding: 11mm 14mm 9mm 14mm;
+    }
+
+    /* 練字格列與單格樣式 */
+    .grid-row {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 0 auto;
+    }
+
+    .grid-cell {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-repeat: no-repeat;
+      background-size: 100% 100%;
+      flex-shrink: 0;
+      user-select: none;
+    }
+
+    .cell-char {
+      line-height: 1;
+      display: block;
+      text-align: center;
+      position: relative;
+      z-index: 2;
+      /* 避免某些字體在極細筆畫時邊緣被裁切 */
+      padding: 1px;
+    }
+
+    /* 列印專用規則：精準隱藏介面、1:1 A4 零偏移分頁 */
+    @media print {
+      html, body {
+        background: #ffffff !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        width: auto !important;
+        height: auto !important;
+        overflow: visible !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+
+      .no-print {
+        display: none !important;
+      }
+
+      #app-shell,
+      #preview-pane,
+      #preview-scroll-container {
+        display: block !important;
+        position: static !important;
+        width: auto !important;
+        height: auto !important;
+        max-height: none !important;
+        overflow: visible !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        background: #ffffff !important;
+      }
+
+      #zoom-wrapper {
+        width: auto !important;
+        height: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+
+      #pages-stage {
+        transform: none !important;
+        gap: 0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        display: block !important;
+      }
+
+      .a4-sheet {
+        box-shadow: none !important;
+        border: none !important;
+        margin: 0 !important;
+        page-break-after: always;
+        break-after: page;
+      }
+
+      .a4-sheet:last-child {
+        page-break-after: auto;
+        break-after: auto;
+      }
+    }
+  </style>
+
+  <!-- 動態 @page 方向樣式 -->
+  <style id="dynamic-page-orientation">
+    @page {
+      size: A4 portrait;
+      margin: 0;
+    }
+  </style>
+</head>
+<body class="antialiased selection:bg-amber-200/60">
+
+  <div id="app-shell" class="min-h-screen lg:h-screen flex flex-col">
+
+    <!-- ==================== 頂部工作室工具列 ==================== -->
+    <header class="no-print sticky top-0 z-30 bg-[#faf8f5]/95 backdrop-blur border-b border-[#e2dcd2] px-3 sm:px-5 py-2.5 flex flex-wrap items-center justify-between gap-2 shadow-xs">
+      <!-- 品牌標題與印章徽記 -->
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-lg bg-[#b93829] text-white flex items-center justify-center font-serif font-bold text-base shadow-xs select-none" title="硬筆書法工作室">
+          帖
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-sm sm:text-base font-semibold tracking-wide text-stone-800">硬筆字帖產生器</h1>
+            <span class="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-stone-200/80 text-stone-700">
+              A4 向量列印版
+            </span>
+          </div>
+          <p id="stats-bar" class="text-[11px] text-stone-500 leading-tight mt-0.5">
+            共 1 頁 · 139 字 · 每行 13 格 × 每頁 16 行
+          </p>
+        </div>
+      </div>
+
+      <!-- 手機 / 平板視圖切換鈕 -->
+      <div class="flex lg:hidden bg-stone-200/80 p-0.5 rounded-lg text-xs font-medium">
+        <button id="mobile-tab-settings" type="button" class="px-3 py-1.5 rounded-md bg-white text-stone-800 shadow-xs transition">
+          參數設定
+        </button>
+        <button id="mobile-tab-preview" type="button" class="px-3 py-1.5 rounded-md text-stone-600 hover:text-stone-900 transition">
+          字帖預覽
+        </button>
+      </div>
+
+      <!-- 右側縮放、匯出 PNG 與列印按鈕 -->
+      <div class="flex items-center gap-2 sm:gap-2.5 ml-auto lg:ml-0">
+        <!-- 預覽縮放控制 -->
+        <div class="hidden sm:flex items-center bg-white border border-[#ded8ce] rounded-lg px-1.5 py-1 shadow-2xs">
+          <button id="zoom-out-btn" type="button" class="w-6 h-6 flex items-center justify-center rounded hover:bg-stone-100 text-stone-600 font-medium" title="縮小預覽">−</button>
+          <span id="zoom-label" class="w-12 text-center text-xs font-medium text-stone-700 tabular-nums">80%</span>
+          <button id="zoom-in-btn" type="button" class="w-6 h-6 flex items-center justify-center rounded hover:bg-stone-100 text-stone-600 font-medium" title="放大預覽">+</button>
+          <div class="w-px h-4 bg-stone-200 mx-1"></div>
+          <button id="zoom-fit-btn" type="button" class="px-2 py-0.5 text-[11px] font-medium text-stone-600 hover:text-stone-900 hover:bg-stone-100 rounded transition" title="自動符合預覽區寬度">
+            適寬
+          </button>
+        </div>
+
+        <!-- 匯出當前頁為 PNG -->
+        <div class="flex items-center bg-white border border-[#ded8ce] rounded-lg overflow-hidden shadow-2xs">
+          <select id="png-page-select" aria-label="選擇匯出頁碼" class="text-xs text-stone-700 bg-transparent pl-2.5 pr-1 py-1.5 outline-none cursor-pointer border-r border-stone-200">
+            <option value="1">第 1 頁</option>
+          </select>
+          <button id="export-png-btn" type="button" class="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-medium text-stone-700 hover:bg-stone-100 active:bg-stone-200 transition cursor-pointer" title="將所選頁面匯出為高解析度 300 DPI PNG 圖片">
+            <svg class="w-3.5 h-3.5 text-stone-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            <span>匯出 PNG</span>
+          </button>
+        </div>
+
+        <!-- 列印 / 另存 PDF -->
+        <button id="print-pdf-btn" type="button" class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#b93829] hover:bg-[#992b1e] active:scale-[0.99] text-white text-xs sm:text-sm font-medium shadow-xs transition cursor-pointer">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+          </svg>
+          <span>列印 / 另存 PDF</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- ==================== 主工作區：左側控制面板 + 右側預覽區 ==================== -->
+    <div class="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden">
+
+      <!-- 左側控制面板 -->
+      <aside id="control-sidebar" class="no-print w-full lg:w-[390px] xl:w-[410px] shrink-0 bg-[#faf8f5] border-r border-[#e2dcd2] overflow-y-auto p-4 space-y-4">
+
+        <!-- 區塊 1：字體系統 -->
+        <section class="bg-white rounded-xl border border-[#e6e0d6] p-3.5 shadow-2xs space-y-3">
+          <div class="flex items-center justify-between">
+            <h2 class="text-xs font-semibold uppercase tracking-wider text-stone-700 flex items-center gap-1.5">
+              <span class="w-1.5 h-3.5 rounded-full bg-[#b93829]"></span>
+              字體系統設定
+            </h2>
+            <span id="font-status-badge" class="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200/70">
+              <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+              字體載入中
+            </span>
+          </div>
+
+          <div>
+            <label for="font-select" class="block text-xs font-medium text-stone-600 mb-1">選擇字帖字體</label>
+            <select id="font-select" class="w-full rounded-lg border border-[#d6cfc4] bg-[#fcfbf9] px-3 py-2 text-xs sm:text-sm text-stone-800 focus:border-stone-500 focus:outline-none transition">
+              <option value="chenyuluoyan" selected>辰宇落雁體 Thin (ChenYuluoyan) · 細筆文青</option>
+              <option value="lxgw">霞鶩文楷 TC (LXGW WenKai TC) · 清秀硬筆</option>
+              <option value="biaukai">標準標楷體 (BiauKai / KaiTi) · 傳統正楷</option>
+              <option value="notoserif">思源宋體 (Noto Serif TC) · 典雅印刷</option>
+              <option value="notosans">思源黑體 (Noto Sans TC) · 現代簡約</option>
+            </select>
+          </div>
+
+          <!-- 上傳自訂本地字體 -->
+          <div class="pt-1 border-t border-stone-100">
+            <div class="flex items-center justify-between gap-2">
+              <div class="text-[11px] text-stone-500 leading-snug">
+                支援匯入本機字體檔（<code class="text-stone-700">.ttf / .otf / .woff2</code>）
+              </div>
+              <label for="custom-font-input" class="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200/80 text-stone-700 text-xs font-medium cursor-pointer transition border border-stone-200/80">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+                <span>上傳字體</span>
+              </label>
+              <input id="custom-font-input" type="file" accept=".ttf,.otf,.woff2,.woff" class="hidden" />
+            </div>
+            <p id="custom-font-filename" class="hidden mt-1.5 text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-200/70 rounded-md px-2 py-1 truncate"></p>
+          </div>
+        </section>
+
+        <!-- 區塊 2：練字內容與預設範文庫 -->
+        <section class="bg-white rounded-xl border border-[#e6e0d6] p-3.5 shadow-2xs space-y-3">
+          <div class="flex items-center justify-between">
+            <h2 class="text-xs font-semibold uppercase tracking-wider text-stone-700 flex items-center gap-1.5">
+              <span class="w-1.5 h-3.5 rounded-full bg-stone-700"></span>
+              練字內容與範文庫
+            </h2>
+            <span id="char-count-pill" class="text-[11px] font-medium text-stone-500 tabular-nums">139 字</span>
+          </div>
+
+          <div>
+            <label for="preset-select" class="block text-xs font-medium text-stone-600 mb-1">一鍵載入預設範文</label>
+            <select id="preset-select" class="w-full rounded-lg border border-[#d6cfc4] bg-[#fcfbf9] px-3 py-2 text-xs sm:text-sm text-stone-800 focus:border-stone-500 focus:outline-none transition">
+              <option value="zhuanfeng" selected>【撰風散文選（預設）】生活的火花與文字</option>
+              <option value="yongzi">【永字八法與常用字】經典結構練習</option>
+              <option value="tangshi">【經典唐詩選】李白 · 靜夜思</option>
+              <option value="xinjing">【心經節錄】般若波羅蜜多心經</option>
+            </select>
+          </div>
+
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label for="practice-text" class="text-xs font-medium text-stone-600">自訂練習文字</label>
+              <button id="clear-text-btn" type="button" class="text-[11px] text-stone-400 hover:text-stone-700 transition">清空（產生空白練字紙）</button>
+            </div>
+            <textarea id="practice-text" rows="4" placeholder="在此輸入或貼上任意繁體中文文章、詩詞、單字..." class="w-full rounded-lg border border-[#d6cfc4] bg-[#fcfbf9] p-2.5 text-xs sm:text-sm text-stone-800 leading-relaxed focus:border-stone-500 focus:outline-none resize-y transition">我是撰風，雖然我們依然脫離不了生活中的糖水片，但仍不斷在尋找相似群體裡一份渺小卻耀眼的獨到，不僅在於攝影，這也是撰寫文章的魅力所在。散文是一種將生活中零星的火花串聯的藝術，它能勾引出每個故事的形狀，讀者感同身受的把自己的記憶貼合塑形。文字，讓我發覺，原來我們看似那麼的遠，竟能如此之近。</textarea>
+          </div>
+
+          <!-- 文字過濾選項 -->
+          <div class="flex items-center gap-2 pt-0.5">
+            <label class="flex-1 flex items-center gap-2 p-2 rounded-lg border border-stone-200 bg-stone-50/70 cursor-pointer hover:bg-stone-100/70 transition">
+              <input type="radio" name="punct-mode" value="keep" checked class="accent-stone-800" />
+              <span class="text-xs text-stone-700">保留標點符號</span>
+            </label>
+            <label class="flex-1 flex items-center gap-2 p-2 rounded-lg border border-stone-200 bg-stone-50/70 cursor-pointer hover:bg-stone-100/70 transition">
+              <input type="radio" name="punct-mode" value="han-only" class="accent-stone-800" />
+              <span class="text-xs text-stone-700">僅保留國字</span>
+            </label>
+          </div>
+        </section>
+
+        <!-- 區塊 3：格線樣式與雙排版模式 -->
+        <section class="bg-white rounded-xl border border-[#e6e0d6] p-3.5 shadow-2xs space-y-3.5">
+          <h2 class="text-xs font-semibold uppercase tracking-wider text-stone-700 flex items-center gap-1.5">
+            <span class="w-1.5 h-3.5 rounded-full bg-stone-700"></span>
+            練字格樣式與排版模式
+          </h2>
+
+          <!-- 6 種高解析向量格線 -->
+          <div>
+            <span class="block text-xs font-medium text-stone-600 mb-1.5">格線樣式（高解析向量輸出）</span>
+            <div id="grid-style-buttons" class="grid grid-cols-3 gap-2">
+              <button type="button" data-grid="cross-square" class="grid-style-btn active flex flex-col items-center gap-1 p-2 rounded-lg border border-stone-800 bg-stone-800 text-white text-[11px] font-medium transition cursor-pointer">
+                <svg class="w-6 h-6" viewBox="0 0 32 32" fill="none">
+                  <rect x="3" y="3" width="26" height="26" stroke="currentColor" stroke-width="1.5"/>
+                  <line x1="16" y1="3" x2="16" y2="29" stroke="currentColor" stroke-width="1" stroke-dasharray="2 2" opacity="0.65"/>
+                  <line x1="3" y1="16" x2="29" y2="16" stroke="currentColor" stroke-width="1" stroke-dasharray="2 2" opacity="0.65"/>
+                </svg>
+                <span>方眼十字格</span>
+              </button>
+
+              <button type="button" data-grid="tian" class="grid-style-btn flex flex-col items-center gap-1 p-2 rounded-lg border border-stone-200 bg-stone-50 text-stone-700 hover:bg-stone-100 text-[11px] font-medium transition cursor-pointer">
+                <svg class="w-6 h-6" viewBox="0 0 32 32" fill="none">
+                  <rect x="3" y="3" width="26" height="26" stroke="currentColor" stroke-width="1.8"/>
+                  <line x1="16" y1="3" x2="16" y2="29" stroke="currentColor" stroke-width="1.2" stroke-dasharray="3 2"/>
+                  <line x1="3" y1="16" x2="29" y2="16" stroke="currentColor" stroke-width="1.2" stroke-dasharray="3 2"/>
+                </svg>
+                <span>田字格</span>
+              </button>
+
+              <button type="button" data-grid="mi" class="grid-style-btn flex flex-col items-center gap-1 p-2 rounded-lg border border-stone-200 bg-stone-50 text-stone-700 hover:bg-stone-100 text-[11px] font-medium transition cursor-pointer">
+                <svg class="w-6 h-6" viewBox="0 0 32 32" fill="none">
+                  <rect x="3" y="3" width="26" height="26" stroke="currentColor" stroke-width="1.6"/>
+                  <line x1="16" y1="3" x2="16" y2="29" stroke="currentColor" stroke-width="1" stroke-dasharray="2.5 2"/>
+                  <line x1="3" y1="16" x2="29" y2="16" stroke="currentColor" stroke-width="1" stroke-dasharray="2.5 2"/>
+                  <line x1="3" y1="3" x2="29" y2="29" stroke="currentColor" stroke-width="1" stroke-dasharray="2.5 2"/>
+                  <line x1="29" y1="3" x2="3" y2="29" stroke="currentColor" stroke-width="1" stroke-dasharray="2.5 2"/>
+                </svg>
+                <span>米字格</span>
+              </button>
+
+              <button type="button" data-grid="jiugong" class="grid-style-btn flex flex-col items-center gap-1 p-2 rounded-lg border border-stone-200 bg-stone-50 text-stone-700 hover:bg-stone-100 text-[11px] font-medium transition cursor-pointer">
+                <svg class="w-6 h-6" viewBox="0 0 32 32" fill="none">
+                  <rect x="3" y="3" width="26" height="26" stroke="currentColor" stroke-width="1.6"/>
+                  <line x1="11.6" y1="3" x2="11.6" y2="29" stroke="currentColor" stroke-width="1" stroke-dasharray="2 2"/>
+                  <line x1="20.3" y1="3" x2="20.3" y2="29" stroke="currentColor" stroke-width="1" stroke-dasharray="2 2"/>
+                  <line x1="3" y1="11.6" x2="29" y2="11.6" stroke="currentColor" stroke-width="1" stroke-dasharray="2 2"/>
+                  <line x1="3" y1="20.3" x2="29" y2="20.3" stroke="currentColor" stroke-width="1" stroke-dasharray="2 2"/>
+                </svg>
+                <span>九宮格</span>
+              </button>
+
+              <button type="button" data-grid="lined" class="grid-style-btn flex flex-col items-center gap-1 p-2 rounded-lg border border-stone-200 bg-stone-50 text-stone-700 hover:bg-stone-100 text-[11px] font-medium transition cursor-pointer">
+                <svg class="w-6 h-6" viewBox="0 0 32 32" fill="none">
+                  <line x1="3" y1="6" x2="29" y2="6" stroke="currentColor" stroke-width="1.6"/>
+                  <line x1="3" y1="16" x2="29" y2="16" stroke="currentColor" stroke-width="1" stroke-dasharray="2 3" opacity="0.6"/>
+                  <line x1="3" y1="26" x2="29" y2="26" stroke="currentColor" stroke-width="1.6"/>
+                </svg>
+                <span>橫線格</span>
+              </button>
+
+              <button type="button" data-grid="none" class="grid-style-btn flex flex-col items-center gap-1 p-2 rounded-lg border border-stone-200 bg-stone-50 text-stone-700 hover:bg-stone-100 text-[11px] font-medium transition cursor-pointer">
+                <svg class="w-6 h-6" viewBox="0 0 32 32" fill="none">
+                  <path d="M4 9V4H9M23 4H28V9M28 23V28H23M9 28H4V23" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                  <text x="16" y="20" text-anchor="middle" font-size="11" fill="currentColor" opacity="0.65">字</text>
+                </svg>
+                <span>無格純描紅</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- 雙排版模式切換 -->
+          <div class="pt-1 border-t border-stone-100">
+            <span class="block text-xs font-medium text-stone-600 mb-1.5">練字排版模式</span>
+            <div class="grid grid-cols-2 gap-1.5 bg-stone-100 p-1 rounded-lg">
+              <button id="mode-paragraph-btn" type="button" class="py-1.5 px-2 rounded-md text-xs font-medium bg-white text-stone-800 shadow-2xs transition cursor-pointer">
+                段落文章模式
+              </button>
+              <button id="mode-single-btn" type="button" class="py-1.5 px-2 rounded-md text-xs font-medium text-stone-600 hover:text-stone-900 transition cursor-pointer">
+                單字精練模式
+              </button>
+            </div>
+
+            <!-- 段落文章模式子選項 -->
+            <div id="paragraph-subcontrols" class="mt-2.5 space-y-1.5">
+              <span class="block text-[11px] font-medium text-stone-500">練習節奏安排</span>
+              <div class="space-y-1.5">
+                <label class="flex items-center gap-2 p-2 rounded-lg border border-stone-200 bg-stone-50/70 cursor-pointer hover:bg-stone-100/70 transition">
+                  <input type="radio" name="para-rhythm" value="all-trace" checked class="accent-stone-800" />
+                  <div>
+                    <div class="text-xs font-medium text-stone-800">全篇描紅</div>
+                    <div class="text-[11px] text-stone-500">每格皆顯示淡色描紅字，適合快速掌握行氣</div>
+                  </div>
+                </label>
+                <label class="flex items-center gap-2 p-2 rounded-lg border border-stone-200 bg-stone-50/70 cursor-pointer hover:bg-stone-100/70 transition">
+                  <input type="radio" name="para-rhythm" value="alternate" class="accent-stone-800" />
+                  <div>
+                    <div class="text-xs font-medium text-stone-800">隔行描紅＋臨寫</div>
+                    <div class="text-[11px] text-stone-500">第一行全描紅、第二行空白格對照臨寫，交替循環</div>
+                  </div>
+                </label>
+                <label class="flex items-center gap-2 p-2 rounded-lg border border-stone-200 bg-stone-50/70 cursor-pointer hover:bg-stone-100/70 transition">
+                  <input type="radio" name="para-rhythm" value="blank-ref" class="accent-stone-800" />
+                  <div>
+                    <div class="text-xs font-medium text-stone-800">純空白練字格（頁首附參考全文）</div>
+                    <div class="text-[11px] text-stone-500">首頁上方展示完整範文，下方全為純淨空白格</div>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <!-- 單字精練模式子選項 -->
+            <div id="single-subcontrols" class="hidden mt-2.5 p-2.5 rounded-lg bg-stone-50 border border-stone-200/80 space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-medium text-stone-700">每行結構：1 範字 + 描紅 + 臨寫</span>
+                <span id="single-trace-label" class="text-xs font-semibold text-[#b93829] tabular-nums">3 格描紅</span>
+              </div>
+              <input id="single-trace-slider" type="range" min="1" max="5" step="1" value="3" />
+              <p class="text-[11px] text-stone-500 leading-snug">
+                每字獨立佔滿一行：第 1 格為深色範字，接著 <span id="single-trace-desc">3</span> 格淡色描紅，該行其餘格子為空白臨寫格。
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <!-- 區塊 4：細部視覺微調與頁面設定 -->
+        <section class="bg-white rounded-xl border border-[#e6e0d6] p-3.5 shadow-2xs space-y-3.5">
+          <h2 class="text-xs font-semibold uppercase tracking-wider text-stone-700 flex items-center gap-1.5">
+            <span class="w-1.5 h-3.5 rounded-full bg-stone-700"></span>
+            視覺微調與頁面設定
+          </h2>
+
+          <!-- 格線顏色主題 -->
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="text-xs font-medium text-stone-600">格線顏色主題</span>
+              <span id="color-theme-name" class="text-[11px] font-medium text-stone-500">文青淺灰</span>
+            </div>
+            <div id="color-swatches" class="flex items-center gap-2.5">
+              <button type="button" data-color="gray" data-name="文青淺灰" class="color-swatch active w-7 h-7 rounded-full border-2 border-stone-800 ring-2 ring-stone-300 flex items-center justify-center cursor-pointer transition" style="background-color: #94a3b8;" title="文青淺灰（預設）"></button>
+              <button type="button" data-color="vermilion" data-name="經典朱紅" class="color-swatch w-7 h-7 rounded-full border-2 border-white shadow-xs cursor-pointer transition" style="background-color: #dc2626;" title="經典朱紅"></button>
+              <button type="button" data-color="pine" data-name="松煙墨綠" class="color-swatch w-7 h-7 rounded-full border-2 border-white shadow-xs cursor-pointer transition" style="background-color: #2d5a4c;" title="松煙墨綠"></button>
+              <button type="button" data-color="indigo" data-name="深海靛藍" class="color-swatch w-7 h-7 rounded-full border-2 border-white shadow-xs cursor-pointer transition" style="background-color: #1e40af;" title="深海靛藍"></button>
+              <button type="button" data-color="black" data-name="純黑" class="color-swatch w-7 h-7 rounded-full border-2 border-white shadow-xs cursor-pointer transition" style="background-color: #18181b;" title="純黑"></button>
+            </div>
+          </div>
+
+          <!-- 滑桿微調群組 -->
+          <div class="space-y-3 pt-1 border-t border-stone-100">
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span class="text-stone-600 font-medium">格子大小</span>
+                <span id="cell-size-val" class="font-semibold text-stone-800 tabular-nums">14.0 mm</span>
+              </div>
+              <input id="cell-size-slider" type="range" min="11" max="20" step="0.5" value="14" />
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span class="text-stone-600 font-medium">字體大小比例（格內留白）</span>
+                <span id="font-ratio-val" class="font-semibold text-stone-800 tabular-nums">66%</span>
+              </div>
+              <input id="font-ratio-slider" type="range" min="55" max="90" step="1" value="66" />
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span class="text-stone-600 font-medium">描紅透明度</span>
+                <span id="trace-opacity-val" class="font-semibold text-stone-800 tabular-nums">26%</span>
+              </div>
+              <input id="trace-opacity-slider" type="range" min="10" max="60" step="1" value="26" />
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span class="text-stone-600 font-medium">範字透明度（單字精練首格）</span>
+                <span id="model-opacity-val" class="font-semibold text-stone-800 tabular-nums">88%</span>
+              </div>
+              <input id="model-opacity-slider" type="range" min="60" max="100" step="1" value="88" />
+            </div>
+          </div>
+
+          <!-- 紙張方向與頁首標題設定 -->
+          <div class="space-y-2.5 pt-2 border-t border-stone-100">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-medium text-stone-600">紙張方向</span>
+              <div class="flex bg-stone-100 p-0.5 rounded-lg text-xs">
+                <button id="orient-portrait-btn" type="button" class="px-2.5 py-1 rounded-md bg-white text-stone-800 font-medium shadow-2xs transition cursor-pointer">
+                  A4 直式
+                </button>
+                <button id="orient-landscape-btn" type="button" class="px-2.5 py-1 rounded-md text-stone-600 hover:text-stone-900 font-medium transition cursor-pointer">
+                  A4 橫式
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label for="header-title-input" class="block text-xs font-medium text-stone-600 mb-1">頁首主標題</label>
+              <input id="header-title-input" type="text" value="硬筆手寫練字帖 · 辰宇落雁體 Thin" class="w-full rounded-lg border border-[#d6cfc4] bg-[#fcfbf9] px-2.5 py-1.5 text-xs text-stone-800 focus:border-stone-500 focus:outline-none" />
+            </div>
+
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <label for="header-subtitle-input" class="text-xs font-medium text-stone-600">副標題 / 姓名日期欄</label>
+                <label class="inline-flex items-center gap-1 text-[11px] text-stone-500 cursor-pointer">
+                  <input id="show-subtitle-chk" type="checkbox" checked class="accent-stone-800" />
+                  <span>顯示</span>
+                </label>
+              </div>
+              <input id="header-subtitle-input" type="text" value="姓名：＿＿＿＿＿＿　日期：＿＿ 年 ＿＿ 月 ＿＿ 日　用筆：0.38mm 中性筆" class="w-full rounded-lg border border-[#d6cfc4] bg-[#fcfbf9] px-2.5 py-1.5 text-xs text-stone-800 focus:border-stone-500 focus:outline-none" />
+            </div>
+
+            <div class="flex items-center justify-between pt-0.5">
+              <span class="text-xs text-stone-600">頁尾顯示頁碼</span>
+              <label class="inline-flex items-center gap-1.5 text-xs text-stone-700 cursor-pointer">
+                <input id="show-pagenum-chk" type="checkbox" checked class="accent-stone-800" />
+                <span>顯示第 X 頁 / 共 Y 頁</span>
+              </label>
+            </div>
+          </div>
+        </section>
+
+      </aside>
+
+      <!-- 右側擬真 A4 多頁預覽區 -->
+      <main id="preview-pane" class="hidden lg:flex flex-1 studio-desk flex-col min-w-0 min-h-0 relative">
+        <!-- 手機版浮動縮放提示列 -->
+        <div class="no-print flex sm:hidden items-center justify-between bg-[#faf8f5]/90 backdrop-blur border-b border-[#e2dcd2] px-3 py-1.5 text-xs text-stone-600">
+          <span>A4 實體紙張預覽</span>
+          <div class="flex items-center gap-1.5">
+            <button id="mobile-zoom-out" type="button" class="px-2 py-0.5 rounded bg-white border border-stone-200">−</button>
+            <span id="mobile-zoom-label" class="w-10 text-center tabular-nums">50%</span>
+            <button id="mobile-zoom-in" type="button" class="px-2 py-0.5 rounded bg-white border border-stone-200">+</button>
+            <button id="mobile-zoom-fit" type="button" class="px-2 py-0.5 rounded bg-stone-800 text-white">適寬</button>
+          </div>
+        </div>
+
+        <div id="preview-scroll-container" class="flex-1 overflow-auto p-4 sm:p-8 flex justify-center items-start">
+          <div id="zoom-wrapper" class="relative flex justify-center">
+            <div id="pages-stage" class="flex flex-col items-center gap-7 origin-top transition-transform duration-150">
+              <!-- 由 JavaScript 動態生成一頁或多頁 A4 紙張 -->
+            </div>
+          </div>
+        </div>
+      </main>
+
+    </div>
+  </div>
+
+  <!-- 輕量提示訊息 Toast -->
+  <div id="toast-container" class="no-print fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <script>
+    (() => {
+      'use strict';
+
+      // ==================== 1. 預設範文庫與設定常數 ====================
+      const PRESETS = {
+        zhuanfeng: {
+          title: '硬筆手寫練字帖 · 辰宇落雁體 Thin',
+          text: '我是撰風，雖然我們依然脫離不了生活中的糖水片，但仍不斷在尋找相似群體裡一份渺小卻耀眼的獨到，不僅在於攝影，這也是撰寫文章的魅力所在。散文是一種將生活中零星的火花串聯的藝術，它能勾引出每個故事的形狀，讀者感同身受的把自己的記憶貼合塑形。文字，讓我發覺，原來我們看似那麼的遠，竟能如此之近。'
+        },
+        yongzi: {
+          title: '硬筆基礎練字帖 · 永字八法與常用字',
+          text: '永側勒努趯策掠啄磔風撰離渺耀寫藝遠'
+        },
+        tangshi: {
+          title: '硬筆詩詞練字帖 · 李白《靜夜思》',
+          text: '床前明月光，疑是地上霜。舉頭望明月，低頭思故鄉。'
+        },
+        xinjing: {
+          title: '硬筆靜心練字帖 · 般若波羅蜜多心經節錄',
+          text: '觀自在菩薩，行深般若波羅蜜多時，照見五蘊皆空，度一切苦厄。'
+        }
+      };
+
+      const FONT_STACKS = {
+        chenyuluoyan: "'ChenYuluoyan', 'LXGW WenKai TC', 'BiauKai', 'DFKai-SB', 'Kaiti TC', 'STKaiti', 'KaiTi', serif",
+        lxgw: "'LXGW WenKai TC', 'BiauKai', 'DFKai-SB', 'Kaiti TC', 'STKaiti', 'KaiTi', serif",
+        biaukai: "'BiauKai', 'DFKai-SB', 'Kaiti TC', 'STKaiti', 'KaiTi', 'Noto Serif TC', serif",
+        notoserif: "'Noto Serif TC', 'PMingLiU', 'MingLiU', serif",
+        notosans: "'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', sans-serif"
+      };
+
+      const COLOR_THEMES = {
+        gray: { name: '文青淺灰', primary: '#94a3b8', guide: '#cbd5e1', header: '#334155', sub: '#64748b' },
+        vermilion: { name: '經典朱紅', primary: '#dc2626', guide: '#fca5a5', header: '#991b1b', sub: '#b91c1c' },
+        pine: { name: '松煙墨綠', primary: '#2d5a4c', guide: '#9bc4b7', header: '#1e3f35', sub: '#3f6e5f' },
+        indigo: { name: '深海靛藍', primary: '#1e40af', guide: '#93c5fd', header: '#1e3a8a', sub: '#3b82f6' },
+        black: { name: '純黑', primary: '#18181b', guide: '#a1a1aa', header: '#18181b', sub: '#52525b' }
+      };
+
+      // ==================== 2. 應用程式核心狀態 ====================
+      const state = {
+        fontKey: 'chenyuluoyan',
+        customFonts: {}, // { custom_id: { name, family } }
+        text: PRESETS.zhuanfeng.text,
+        punctMode: 'keep', // 'keep' | 'han-only'
+        gridStyle: 'cross-square', // 'cross-square' | 'tian' | 'mi' | 'jiugong' | 'lined' | 'none'
+        layoutMode: 'paragraph', // 'paragraph' | 'single'
+        paraRhythm: 'all-trace', // 'all-trace' | 'alternate' | 'blank-ref'
+        singleTraceCount: 3, // 1..5
+        colorTheme: 'gray',
+        cellSize: 14, // mm (11..20)
+        fontRatio: 66, // % (55..90)
+        traceOpacity: 26, // % (10..60)
+        modelOpacity: 88, // % (60..100)
+        orientation: 'portrait', // 'portrait' | 'landscape'
+        headerTitle: PRESETS.zhuanfeng.title,
+        headerSubtitle: '姓名：＿＿＿＿＿＿　日期：＿＿ 年 ＿＿ 月 ＿＿ 日　用筆：0.38mm 中性筆',
+        showSubtitle: true,
+        showPageNum: true,
+        zoom: 0.8,
+        renderedPages: [] // 儲存每頁結構供 PNG 匯出使用
+      };
+
+      // ==================== 3. DOM 元素快取 ====================
+      const el = {
+        fontSelect: document.getElementById('font-select'),
+        fontStatusBadge: document.getElementById('font-status-badge'),
+        customFontInput: document.getElementById('custom-font-input'),
+        customFontFilename: document.getElementById('custom-font-filename'),
+        presetSelect: document.getElementById('preset-select'),
+        practiceText: document.getElementById('practice-text'),
+        clearTextBtn: document.getElementById('clear-text-btn'),
+        charCountPill: document.getElementById('char-count-pill'),
+        gridStyleBtns: document.querySelectorAll('.grid-style-btn'),
+        modeParagraphBtn: document.getElementById('mode-paragraph-btn'),
+        modeSingleBtn: document.getElementById('mode-single-btn'),
+        paragraphSubcontrols: document.getElementById('paragraph-subcontrols'),
+        singleSubcontrols: document.getElementById('single-subcontrols'),
+        singleTraceSlider: document.getElementById('single-trace-slider'),
+        singleTraceLabel: document.getElementById('single-trace-label'),
+        singleTraceDesc: document.getElementById('single-trace-desc'),
+        colorSwatches: document.querySelectorAll('.color-swatch'),
+        colorThemeName: document.getElementById('color-theme-name'),
+        cellSizeSlider: document.getElementById('cell-size-slider'),
+        cellSizeVal: document.getElementById('cell-size-val'),
+        fontRatioSlider: document.getElementById('font-ratio-slider'),
+        fontRatioVal: document.getElementById('font-ratio-val'),
+        traceOpacitySlider: document.getElementById('trace-opacity-slider'),
+        traceOpacityVal: document.getElementById('trace-opacity-val'),
+        modelOpacitySlider: document.getElementById('model-opacity-slider'),
+        modelOpacityVal: document.getElementById('model-opacity-val'),
+        orientPortraitBtn: document.getElementById('orient-portrait-btn'),
+        orientLandscapeBtn: document.getElementById('orient-landscape-btn'),
+        dynamicPageOrientation: document.getElementById('dynamic-page-orientation'),
+        headerTitleInput: document.getElementById('header-title-input'),
+        headerSubtitleInput: document.getElementById('header-subtitle-input'),
+        showSubtitleChk: document.getElementById('show-subtitle-chk'),
+        showPagenumChk: document.getElementById('show-pagenum-chk'),
+        statsBar: document.getElementById('stats-bar'),
+        zoomOutBtn: document.getElementById('zoom-out-btn'),
+        zoomInBtn: document.getElementById('zoom-in-btn'),
+        zoomFitBtn: document.getElementById('zoom-fit-btn'),
+        zoomLabel: document.getElementById('zoom-label'),
+        mobileZoomOut: document.getElementById('mobile-zoom-out'),
+        mobileZoomIn: document.getElementById('mobile-zoom-in'),
+        mobileZoomFit: document.getElementById('mobile-zoom-fit'),
+        mobileZoomLabel: document.getElementById('mobile-zoom-label'),
+        pngPageSelect: document.getElementById('png-page-select'),
+        exportPngBtn: document.getElementById('export-png-btn'),
+        printPdfBtn: document.getElementById('print-pdf-btn'),
+        previewPane: document.getElementById('preview-pane'),
+        previewScrollContainer: document.getElementById('preview-scroll-container'),
+        zoomWrapper: document.getElementById('zoom-wrapper'),
+        pagesStage: document.getElementById('pages-stage'),
+        controlSidebar: document.getElementById('control-sidebar'),
+        mobileTabSettings: document.getElementById('mobile-tab-settings'),
+        mobileTabPreview: document.getElementById('mobile-tab-preview'),
+        toastContainer: document.getElementById('toast-container')
+      };
+
+      // ==================== 4. 工具函式 ====================
+      function showToast(message, type = 'info') {
+        const toast = document.createElement('div');
+        const bgClass =
+          type === 'success'
+            ? 'bg-emerald-800 text-white'
+            : type === 'error'
+            ? 'bg-red-800 text-white'
+            : 'bg-stone-800 text-white';
+        toast.className = `${bgClass} px-4 py-2.5 rounded-xl shadow-lg text-xs font-medium flex items-center gap-2 transition-all duration-300 opacity-0 translate-y-2`;
+        toast.textContent = message;
+        el.toastContainer.appendChild(toast);
+        requestAnimationFrame(() => {
+          toast.classList.remove('opacity-0', 'translate-y-2');
+        });
+        setTimeout(() => {
+          toast.classList.add('opacity-0', 'translate-y-2');
+          setTimeout(() => toast.remove(), 300);
+        }, 2800);
+      }
+
+      // 取得目前生效的 CSS font-family 字串
+      function getActiveFontFamily() {
+        if (state.customFonts[state.fontKey]) {
+          return `'${state.customFonts[state.fontKey].family}', 'BiauKai', serif`;
+        }
+        return FONT_STACKS[state.fontKey] || FONT_STACKS.chenyuluoyan;
+      }
+
+      // 監控字體載入狀態
+      function updateFontStatus() {
+        if (state.customFonts[state.fontKey]) {
+          el.fontStatusBadge.className =
+            'inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/70';
+          el.fontStatusBadge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>自訂字體已套用';
+          return;
+        }
+
+        if (state.fontKey === 'biaukai') {
+          el.fontStatusBadge.className =
+            'inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/70';
+          el.fontStatusBadge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>系統內建字體';
+          return;
+        }
+
+        const fontCheckName =
+          state.fontKey === 'chenyuluoyan'
+            ? 'ChenYuluoyan'
+            : state.fontKey === 'lxgw'
+            ? 'LXGW WenKai TC'
+            : state.fontKey === 'notoserif'
+            ? 'Noto Serif TC'
+            : 'Noto Sans TC';
+
+        el.fontStatusBadge.className =
+          'inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200/70';
+        el.fontStatusBadge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>字體載入中';
+
+        if (document.fonts && document.fonts.load) {
+          document.fonts
+            .load(`24px "${fontCheckName}"`)
+            .then((loaded) => {
+              if (loaded && loaded.length > 0) {
+                el.fontStatusBadge.className =
+                  'inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/70';
+                el.fontStatusBadge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>雲端字體就緒';
+              } else {
+                el.fontStatusBadge.className =
+                  'inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-stone-100 text-stone-600 border border-stone-200';
+                el.fontStatusBadge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-stone-400"></span>已啟用備援字體';
+              }
+            })
+            .catch(() => {
+              el.fontStatusBadge.className =
+                'inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-stone-100 text-stone-600 border border-stone-200';
+              el.fontStatusBadge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-stone-400"></span>已啟用備援字體';
+            });
+        }
+      }
+
+      // 文字清理與分字
+      function getProcessedChars() {
+        const raw = state.text || '';
+        // 去除所有換行與空白
+        const compact = raw.replace(/[\s\r\n\u3000]+/g, '');
+        const chars = Array.from(compact);
+
+        // 僅保留漢字/英數，或單字精練模式下自動過濾標點符號
+        const filterPunct = state.punctMode === 'han-only' || state.layoutMode === 'single';
+        if (filterPunct) {
+          return chars.filter((ch) =>
+            /[\u4E00-\u9FFF\u3400-\u4DBF\uF900-\uFAFFa-zA-Z0-9]/.test(ch)
+          );
+        }
+        return chars;
+      }
+
+      // ==================== 5. 高解析 SVG 練字格生成器 ====================
+      function buildCellSvgDataUri(gridStyle, themeKey, isLastInRow) {
+        if (gridStyle === 'none') return 'none';
+        const theme = COLOR_THEMES[themeKey] || COLOR_THEMES.gray;
+        const p = theme.primary;
+        const g = theme.guide;
+        let inner = '';
+
+        if (gridStyle === 'lined') {
+          // 橫線格：上下實線 + 中央細虛線
+          inner = `
+            <line x1="0" y1="0" x2="100" y2="0" stroke="${p}" stroke-width="2.2"/>
+            <line x1="0" y1="50" x2="100" y2="50" stroke="${g}" stroke-width="1" stroke-dasharray="3,4"/>
+            <line x1="0" y1="100" x2="100" y2="100" stroke="${p}" stroke-width="2.2"/>
+          `;
+        } else {
+          // 方形外框（左邊界 + 上下邊界，最右側補上右邊界避免重疊加粗）
+          inner += `
+            <line x1="0" y1="0" x2="100" y2="0" stroke="${p}" stroke-width="2.2"/>
+            <line x1="0" y1="100" x2="100" y2="100" stroke="${p}" stroke-width="2.2"/>
+            <line x1="0" y1="0" x2="0" y2="100" stroke="${p}" stroke-width="2.2"/>
+          `;
+          if (isLastInRow) {
+            inner += `<line x1="100" y1="0" x2="100" y2="100" stroke="${p}" stroke-width="2.2"/>`;
+          }
+
+          if (gridStyle === 'cross-square') {
+            inner += `
+              <line x1="50" y1="0" x2="50" y2="100" stroke="${g}" stroke-width="1.1" stroke-dasharray="3,3"/>
+              <line x1="0" y1="50" x2="100" y2="50" stroke="${g}" stroke-width="1.1" stroke-dasharray="3,3"/>
+            `;
+          } else if (gridStyle === 'tian') {
+            inner += `
+              <line x1="50" y1="0" x2="50" y2="100" stroke="${g}" stroke-width="1.35" stroke-dasharray="5,3"/>
+              <line x1="0" y1="50" x2="100" y2="50" stroke="${g}" stroke-width="1.35" stroke-dasharray="5,3"/>
+            `;
+          } else if (gridStyle === 'mi') {
+            inner += `
+              <line x1="50" y1="0" x2="50" y2="100" stroke="${g}" stroke-width="1.2" stroke-dasharray="4,3"/>
+              <line x1="0" y1="50" x2="100" y2="50" stroke="${g}" stroke-width="1.2" stroke-dasharray="4,3"/>
+              <line x1="0" y1="0" x2="100" y2="100" stroke="${g}" stroke-width="1.15" stroke-dasharray="4,3"/>
+              <line x1="100" y1="0" x2="0" y2="100" stroke="${g}" stroke-width="1.15" stroke-dasharray="4,3"/>
+            `;
+          } else if (gridStyle === 'jiugong') {
+            inner += `
+              <line x1="33.33" y1="0" x2="33.33" y2="100" stroke="${g}" stroke-width="1.15" stroke-dasharray="3.5,3"/>
+              <line x1="66.67" y1="0" x2="66.67" y2="100" stroke="${g}" stroke-width="1.15" stroke-dasharray="3.5,3"/>
+              <line x1="0" y1="33.33" x2="100" y2="33.33" stroke="${g}" stroke-width="1.15" stroke-dasharray="3.5,3"/>
+              <line x1="0" y1="66.67" x2="100" y2="66.67" stroke="${g}" stroke-width="1.15" stroke-dasharray="3.5,3"/>
+            `;
+          }
+        }
+
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="none">${inner}</svg>`;
+        return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+      }
+
+      // ==================== 6. A4 版面計算與自動分頁引擎 ====================
+      function computeLayoutAndPages() {
+        const isPortrait = state.orientation === 'portrait';
+        const pageW = isPortrait ? 210 : 297;
+        const pageH = isPortrait ? 297 : 210;
+
+        // 內邊距（與 CSS .a4-sheet 保持一致）
+        const padTop = isPortrait ? 13 : 11;
+        const padBottom = isPortrait ? 10 : 9;
+        const padLR = 14;
+
+        const innerW = pageW - padLR * 2; // 182mm (直式) 或 269mm (橫式)
+        const innerH = pageH - padTop - padBottom; // 274mm (直式) 或 190mm (橫式)
+
+        const cellSize = state.cellSize;
+        const colsPerRow = Math.max(4, Math.floor(innerW / cellSize));
+
+        // 計算頁首與頁尾高度 (mm)
+        const firstHeaderH = state.showSubtitle ? 15.5 : 10.5;
+        const nextHeaderH = 9.5;
+        const footerH = state.showPageNum ? 6.5 : 2;
+        const rowGap = state.layoutMode === 'single' ? 2.5 : 2.1;
+        const rowPitch = cellSize + rowGap;
+
+        const chars = getProcessedChars();
+        el.charCountPill.textContent = `${chars.length} 字`;
+
+        // 若為「純空白練字格（頁首附參考全文）」，計算首頁參考文框所需高度
+        let refBoxHeightMm = 0;
+        const showRefBox =
+          state.layoutMode === 'paragraph' &&
+          state.paraRhythm === 'blank-ref' &&
+          chars.length > 0;
+
+        if (showRefBox) {
+          const refText = state.text.trim();
+          const approxCharsPerLine = Math.floor((innerW - 8) / 3.9);
+          const refLines = Math.max(1, Math.ceil(refText.length / Math.max(10, approxCharsPerLine)));
+          refBoxHeightMm = Math.min(85, 7 + refLines * 5.2);
+        }
+
+        const firstPageAvailH = innerH - firstHeaderH - refBoxHeightMm - footerH;
+        const nextPageAvailH = innerH - nextHeaderH - footerH;
+
+        const firstPageRowsCap = Math.max(1, Math.floor(firstPageAvailH / rowPitch));
+        const nextPageRowsCap = Math.max(1, Math.floor(nextPageAvailH / rowPitch));
+
+        // 依模式建立所有「練習列 (rows)」
+        // 每列格式: { cells: [ { char: string, role: 'model' | 'trace' | 'blank' } ] }
+        const allRows = [];
+
+        if (state.layoutMode === 'paragraph') {
+          if (state.paraRhythm === 'blank-ref') {
+            const targetChars = Math.max(chars.length, colsPerRow * firstPageRowsCap);
+            const totalRows = Math.ceil(targetChars / colsPerRow);
+            for (let r = 0; r < totalRows; r++) {
+              const cells = [];
+              for (let c = 0; c < colsPerRow; c++) {
+                cells.push({ char: '', role: 'blank' });
+              }
+              allRows.push({ cells, isCopyRow: false });
+            }
+          } else {
+            // 將文字切分為每 colsPerRow 一組
+            const chunks = [];
+            if (chars.length === 0) {
+              for (let r = 0; r < firstPageRowsCap; r++) {
+                chunks.push(new Array(colsPerRow).fill(''));
+              }
+            } else {
+              for (let i = 0; i < chars.length; i += colsPerRow) {
+                const slice = chars.slice(i, i + colsPerRow);
+                while (slice.length < colsPerRow) slice.push('');
+                chunks.push(slice);
+              }
+            }
+
+            chunks.forEach((chunk) => {
+              // 描紅行
+              allRows.push({
+                cells: chunk.map((ch) => ({
+                  char: ch,
+                  role: ch ? 'trace' : 'blank'
+                })),
+                isCopyRow: false
+              });
+
+              // 若為「隔行描紅＋臨寫」，緊接一列空白臨寫格
+              if (state.paraRhythm === 'alternate') {
+                allRows.push({
+                  cells: new Array(colsPerRow).fill(null).map(() => ({
+                    char: '',
+                    role: 'blank'
+                  })),
+                  isCopyRow: true
+                });
+              }
+            });
+          }
+        } else {
+          // 單字精練模式：每字佔滿一整行
+          const effectiveTrace = Math.min(state.singleTraceCount, Math.max(1, colsPerRow - 2));
+          const list = chars.length > 0 ? chars : new Array(firstPageRowsCap).fill('');
+          list.forEach((ch) => {
+            const cells = [];
+            for (let c = 0; c < colsPerRow; c++) {
+              if (!ch) {
+                cells.push({ char: '', role: 'blank' });
+              } else if (c === 0) {
+                cells.push({ char: ch, role: 'model' });
+              } else if (c <= effectiveTrace) {
+                cells.push({ char: ch, role: 'trace' });
+              } else {
+                cells.push({ char: '', role: 'blank' });
+              }
+            }
+            allRows.push({ cells, isCopyRow: false });
+          });
+        }
+
+        // 將 allRows 分配到各頁
+        const pages = [];
+        let cursor = 0;
+        let pageIdx = 0;
+
+        while (cursor < allRows.length || pages.length === 0) {
+          let cap = pageIdx === 0 ? firstPageRowsCap : nextPageRowsCap;
+          // 在隔行描紅＋臨寫模式下，盡量保持偶數行（描紅＋臨寫成對），避免臨寫行孤立在次頁頂端
+          if (
+            state.layoutMode === 'paragraph' &&
+            state.paraRhythm === 'alternate' &&
+            cap > 2 &&
+            cap % 2 === 1
+          ) {
+            cap -= 1;
+          }
+
+          const slice = allRows.slice(cursor, cursor + cap);
+          pages.push({
+            pageNumber: pageIdx + 1,
+            isFirstPage: pageIdx === 0,
+            rows: slice,
+            colsPerRow,
+            rowGap,
+            showRefBox: pageIdx === 0 && showRefBox
+          });
+
+          cursor += cap;
+          pageIdx++;
+          if (cursor >= allRows.length) break;
+        }
+
+        return {
+          pages,
+          colsPerRow,
+          firstPageRowsCap,
+          totalChars: chars.length
+        };
+      }
+
+      // ==================== 7. 渲染預覽畫面 ====================
+      function renderWorkbook() {
+        const { pages, colsPerRow, firstPageRowsCap, totalChars } = computeLayoutAndPages();
+        state.renderedPages = pages;
+
+        const theme = COLOR_THEMES[state.colorTheme] || COLOR_THEMES.gray;
+        const fontFamily = getActiveFontFamily();
+        const fontSizeMm = (state.cellSize * (state.fontRatio / 100)).toFixed(2);
+        const traceAlpha = (state.traceOpacity / 100).toFixed(2);
+        const modelAlpha = (state.modelOpacity / 100).toFixed(2);
+
+        // 預先產生一般格與列尾格的 SVG 背景 URI
+        const normalCellBg = buildCellSvgDataUri(state.gridStyle, state.colorTheme, false);
+        const lastCellBg = buildCellSvgDataUri(state.gridStyle, state.colorTheme, true);
+
+        const fragment = document.createDocumentFragment();
+
+        pages.forEach((pageData) => {
+          const sheet = document.createElement('article');
+          sheet.className = `a4-sheet ${state.orientation}`;
+          sheet.dataset.page = String(pageData.pageNumber);
+
+          // 頂部區域（頁首 + 格子主體）
+          const topBlock = document.createElement('div');
+          topBlock.className = 'flex flex-col';
+
+          // 頁首
+          const header = document.createElement('header');
+          header.style.borderBottom = `1.2pt solid ${theme.header}`;
+          header.style.paddingBottom = pageData.isFirstPage ? '2.2mm' : '1.5mm';
+          header.style.marginBottom = '2.5mm';
+
+          if (pageData.isFirstPage) {
+            const titleRow = document.createElement('div');
+            titleRow.className = 'flex items-baseline justify-between gap-4';
+
+            const h1 = document.createElement('h2');
+            h1.textContent = state.headerTitle || '硬筆手寫練字帖';
+            h1.style.fontFamily = fontFamily;
+            h1.style.fontSize = '15pt';
+            h1.style.fontWeight = '400';
+            h1.style.color = theme.header;
+            h1.style.letterSpacing = '0.06em';
+            h1.style.margin = '0';
+            h1.style.lineHeight = '1.2';
+
+            const badge = document.createElement('span');
+            badge.textContent =
+              state.layoutMode === 'single'
+                ? '單字精練字帖'
+                : state.paraRhythm === 'alternate'
+                ? '隔行描紅與臨寫'
+                : state.paraRhythm === 'blank-ref'
+                ? '全文對照臨寫'
+                : '全篇描紅字帖';
+            badge.style.fontSize = '8.5pt';
+            badge.style.color = theme.sub;
+            badge.style.flexShrink = '0';
+
+            titleRow.appendChild(h1);
+            titleRow.appendChild(badge);
+            header.appendChild(titleRow);
+
+            if (state.showSubtitle && state.headerSubtitle.trim()) {
+              const sub = document.createElement('div');
+              sub.textContent = state.headerSubtitle;
+              sub.style.fontSize = '8.5pt';
+              sub.style.color = '#52525b';
+              sub.style.marginTop = '1.5mm';
+              header.appendChild(sub);
+            }
+          } else {
+            // 次頁精簡眉標
+            const compactRow = document.createElement('div');
+            compactRow.className = 'flex items-center justify-between';
+            const leftSpan = document.createElement('span');
+            leftSpan.textContent = state.headerTitle || '硬筆手寫練字帖';
+            leftSpan.style.fontFamily = fontFamily;
+            leftSpan.style.fontSize = '10pt';
+            leftSpan.style.color = theme.header;
+
+            const rightSpan = document.createElement('span');
+            rightSpan.textContent = '續頁練習';
+            rightSpan.style.fontSize = '8pt';
+            rightSpan.style.color = theme.sub;
+
+            compactRow.appendChild(leftSpan);
+            compactRow.appendChild(rightSpan);
+            header.appendChild(compactRow);
+          }
+
+          topBlock.appendChild(header);
+
+          // 若為「純空白練字格」模式，在首頁加入參考全文框
+          if (pageData.showRefBox) {
+            const refBox = document.createElement('div');
+            refBox.style.border = `0.75pt solid ${theme.primary}`;
+            refBox.style.backgroundColor = '#fafaf9';
+            refBox.style.borderRadius = '2mm';
+            refBox.style.padding = '2.2mm 3mm';
+            refBox.style.marginBottom = '2.8mm';
+
+            const refLabel = document.createElement('div');
+            refLabel.textContent = '【臨寫參考範文】';
+            refLabel.style.fontSize = '8pt';
+            refLabel.style.fontWeight = '600';
+            refLabel.style.color = theme.header;
+            refLabel.style.marginBottom = '1mm';
+
+            const refContent = document.createElement('div');
+            refContent.textContent = state.text.trim();
+            refContent.style.fontFamily = fontFamily;
+            refContent.style.fontSize = '10.5pt';
+            refContent.style.lineHeight = '1.55';
+            refContent.style.color = '#27272a';
+            refContent.style.letterSpacing = '0.06em';
+
+            refBox.appendChild(refLabel);
+            refBox.appendChild(refContent);
+            topBlock.appendChild(refBox);
+          }
+
+          // 練字格區
+          const rowsContainer = document.createElement('div');
+          rowsContainer.className = 'flex flex-col';
+          rowsContainer.style.gap = `${pageData.rowGap}mm`;
+
+          pageData.rows.forEach((rowObj) => {
+            const rowEl = document.createElement('div');
+            rowEl.className = 'grid-row';
+
+            rowObj.cells.forEach((cellObj, cIdx) => {
+              const isLast = cIdx === rowObj.cells.length - 1;
+              const cellEl = document.createElement('div');
+              cellEl.className = 'grid-cell';
+              cellEl.style.width = `${state.cellSize}mm`;
+              cellEl.style.height = `${state.cellSize}mm`;
+              cellEl.style.backgroundImage = isLast ? lastCellBg : normalCellBg;
+
+              if (cellObj.char) {
+                const span = document.createElement('span');
+                span.className = 'cell-char';
+                span.textContent = cellObj.char;
+                span.style.fontFamily = fontFamily;
+                span.style.fontSize = `${fontSizeMm}mm`;
+                span.style.color = '#18181b';
+                span.style.opacity = cellObj.role === 'model' ? modelAlpha : traceAlpha;
+                cellEl.appendChild(span);
+              }
+
+              rowEl.appendChild(cellEl);
+            });
+
+            rowsContainer.appendChild(rowEl);
+          });
+
+          topBlock.appendChild(rowsContainer);
+          sheet.appendChild(topBlock);
+
+          // 頁尾
+          const footer = document.createElement('footer');
+          footer.className = 'flex items-center justify-between';
+          footer.style.fontSize = '8pt';
+          footer.style.color = '#71717a';
+          footer.style.paddingTop = '1.5mm';
+
+          const footerLeft = document.createElement('span');
+          footerLeft.textContent = `格距 ${state.cellSize}mm · 靜心運筆，注重間架平衡`;
+
+          const footerRight = document.createElement('span');
+          footerRight.textContent = state.showPageNum
+            ? `第 ${pageData.pageNumber} 頁 / 共 ${pages.length} 頁`
+            : '';
+
+          footer.appendChild(footerLeft);
+          footer.appendChild(footerRight);
+          sheet.appendChild(footer);
+
+          fragment.appendChild(sheet);
+        });
+
+        el.pagesStage.innerHTML = '';
+        el.pagesStage.appendChild(fragment);
+
+        // 更新統計列與 PNG 匯出頁碼選單
+        el.statsBar.textContent = `共 ${pages.length} 頁 · ${totalChars} 字 · 每行 ${colsPerRow} 格 × 首頁 ${firstPageRowsCap} 行`;
+
+        const prevSelectedPage = parseInt(el.pngPageSelect.value, 10) || 1;
+        el.pngPageSelect.innerHTML = '';
+        pages.forEach((p) => {
+          const opt = document.createElement('option');
+          opt.value = String(p.pageNumber);
+          opt.textContent = `第 ${p.pageNumber} 頁`;
+          el.pngPageSelect.appendChild(opt);
+        });
+        el.pngPageSelect.value = String(Math.min(prevSelectedPage, pages.length));
+
+        // 同步更新縮放外框尺寸，避免縮小時下方出現大塊空白
+        requestAnimationFrame(syncZoomWrapperBounds);
+      }
+
+      // ==================== 8. 預覽縮放控制 ====================
+      function syncZoomWrapperBounds() {
+        const stageRect = el.pagesStage.getBoundingClientRect();
+        // getBoundingClientRect() 已包含 transform: scale() 後的實際視覺寬高
+        el.zoomWrapper.style.width = `${Math.ceil(stageRect.width)}px`;
+        el.zoomWrapper.style.height = `${Math.ceil(stageRect.height)}px`;
+      }
+
+      function setZoom(newZoom) {
+        const clamped = Math.max(0.35, Math.min(1.3, Number(newZoom.toFixed(2))));
+        state.zoom = clamped;
+        const pct = `${Math.round(clamped * 100)}%`;
+        el.zoomLabel.textContent = pct;
+        if (el.mobileZoomLabel) el.mobileZoomLabel.textContent = pct;
+        el.pagesStage.style.transform = `scale(${clamped})`;
+        requestAnimationFrame(syncZoomWrapperBounds);
+      }
+
+      function fitZoomToContainer() {
+        const containerW = el.previewScrollContainer.clientWidth;
+        if (!containerW) return;
+        const availableW = Math.max(260, containerW - 48);
+        // 1mm ≈ 3.7795px
+        const sheetPxW = (state.orientation === 'portrait' ? 210 : 297) * 3.7795;
+        const idealZoom = Math.min(1.05, Math.max(0.38, availableW / sheetPxW));
+        setZoom(idealZoom);
+      }
+
+      // ==================== 9. 高解析度 300 DPI PNG 匯出引擎 ====================
+      async function exportPageAsPng(pageNumber) {
+        const pageData = state.renderedPages.find((p) => p.pageNumber === pageNumber);
+        if (!pageData) return;
+
+        el.exportPngBtn.disabled = true;
+        showToast(`正在產生第 ${pageNumber} 頁高解析度 PNG...`);
+
+        try {
+          if (document.fonts && document.fonts.ready) {
+            await document.fonts.ready;
+          }
+
+          const isPortrait = state.orientation === 'portrait';
+          const pageWMm = isPortrait ? 210 : 297;
+          const pageHMm = isPortrait ? 297 : 210;
+
+          // 300 DPI 換算：1 mm = 11.811 px (2480 x 3508 px)
+          const pxPerMm = 2480 / 210;
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.round(pageWMm * pxPerMm);
+          canvas.height = Math.round(pageHMm * pxPerMm);
+
+          const ctx = canvas.getContext('2d');
+          const mm = (val) => val * pxPerMm;
+
+          // 1. 純白紙張底色
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+          const theme = COLOR_THEMES[state.colorTheme] || COLOR_THEMES.gray;
+          const fontFamily = getActiveFontFamily();
+
+          const padTop = isPortrait ? 13 : 11;
+          const padBottom = isPortrait ? 10 : 9;
+          const padLR = 14;
+          const innerW = pageWMm - padLR * 2;
+
+          let cursorY = padTop;
+
+          // 2. 繪製頁首
+          if (pageData.isFirstPage) {
+            ctx.fillStyle = theme.header;
+            ctx.font = `400 ${mm(5.3)}px ${fontFamily}`;
+            ctx.textBaseline = 'top';
+            ctx.textAlign = 'left';
+            ctx.fillText(state.headerTitle || '硬筆手寫練字帖', mm(padLR), mm(cursorY));
+
+            const badgeText =
+              state.layoutMode === 'single'
+                ? '單字精練字帖'
+                : state.paraRhythm === 'alternate'
+                ? '隔行描紅與臨寫'
+                : state.paraRhythm === 'blank-ref'
+                ? '全文對照臨寫'
+                : '全篇描紅字帖';
+            ctx.fillStyle = theme.sub;
+            ctx.font = `400 ${mm(3.0)}px "Noto Sans TC", sans-serif`;
+            ctx.textAlign = 'right';
+            ctx.fillText(badgeText, mm(pageWMm - padLR), mm(cursorY + 1.5));
+
+            cursorY += 6.8;
+
+            if (state.showSubtitle && state.headerSubtitle.trim()) {
+              ctx.fillStyle = '#52525b';
+              ctx.font = `400 ${mm(3.0)}px "Noto Sans TC", sans-serif`;
+              ctx.textAlign = 'left';
+              ctx.fillText(state.headerSubtitle, mm(padLR), mm(cursorY));
+              cursorY += 5.0;
+            }
+          } else {
+            ctx.fillStyle = theme.header;
+            ctx.font = `400 ${mm(3.6)}px ${fontFamily}`;
+            ctx.textBaseline = 'top';
+            ctx.textAlign = 'left';
+            ctx.fillText(state.headerTitle || '硬筆手寫練字帖', mm(padLR), mm(cursorY));
+
+            ctx.fillStyle = theme.sub;
+            ctx.font = `400 ${mm(2.8)}px "Noto Sans TC", sans-serif`;
+            ctx.textAlign = 'right';
+            ctx.fillText('續頁練習', mm(pageWMm - padLR), mm(cursorY + 0.5));
+            cursorY += 5.5;
+          }
+
+          // 頁首分隔線
+          ctx.strokeStyle = theme.header;
+          ctx.lineWidth = mm(0.42);
+          ctx.beginPath();
+          ctx.moveTo(mm(padLR), mm(cursorY));
+          ctx.lineTo(mm(pageWMm - padLR), mm(cursorY));
+          ctx.stroke();
+          cursorY += 3.2;
+
+          // 3. 若有參考全文框，繪製參考全文
+          if (pageData.showRefBox) {
+            const refText = state.text.trim();
+            const boxPad = 2.8;
+            const maxLineW = mm(innerW - boxPad * 2);
+            ctx.font = `400 ${mm(3.7)}px ${fontFamily}`;
+
+            const wrappedLines = [];
+            let currentLine = '';
+            for (const ch of Array.from(refText)) {
+              const testLine = currentLine + ch;
+              if (ctx.measureText(testLine).width > maxLineW && currentLine.length > 0) {
+                wrappedLines.push(currentLine);
+                currentLine = ch;
+              } else {
+                currentLine = testLine;
+              }
+            }
+            if (currentLine) wrappedLines.push(currentLine);
+
+            const lineH = 5.4;
+            const boxH = 6.5 + wrappedLines.length * lineH;
+
+            ctx.fillStyle = '#fafaf9';
+            ctx.strokeStyle = theme.primary;
+            ctx.lineWidth = mm(0.28);
+            ctx.fillRect(mm(padLR), mm(cursorY), mm(innerW), mm(boxH));
+            ctx.strokeRect(mm(padLR), mm(cursorY), mm(innerW), mm(boxH));
+
+            ctx.fillStyle = theme.header;
+            ctx.font = `600 ${mm(2.8)}px "Noto Sans TC", sans-serif`;
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'top';
+            ctx.fillText('【臨寫參考範文】', mm(padLR + boxPad), mm(cursorY + 2.0));
+
+            ctx.fillStyle = '#27272a';
+            ctx.font = `400 ${mm(3.7)}px ${fontFamily}`;
+            wrappedLines.forEach((lineStr, idx) => {
+              ctx.fillText(lineStr, mm(padLR + boxPad), mm(cursorY + 6.0 + idx * lineH));
+            });
+
+            cursorY += boxH + 3.0;
+          }
+
+          // 4. 繪製每一列練字格與文字
+          const cellSize = state.cellSize;
+          const rowTotalW = pageData.colsPerRow * cellSize;
+          const startX = (pageWMm - rowTotalW) / 2;
+          const fontSizeMm = cellSize * (state.fontRatio / 100);
+
+          pageData.rows.forEach((rowObj) => {
+            rowObj.cells.forEach((cellObj, cIdx) => {
+              const x = startX + cIdx * cellSize;
+              const y = cursorY;
+
+              // 繪製格線
+              if (state.gridStyle !== 'none') {
+                ctx.save();
+                if (state.gridStyle === 'lined') {
+                  ctx.strokeStyle = theme.primary;
+                  ctx.lineWidth = mm(0.32);
+                  ctx.setLineDash([]);
+                  ctx.beginPath();
+                  ctx.moveTo(mm(x), mm(y));
+                  ctx.lineTo(mm(x + cellSize), mm(y));
+                  ctx.moveTo(mm(x), mm(y + cellSize));
+                  ctx.lineTo(mm(x + cellSize), mm(y + cellSize));
+                  ctx.stroke();
+
+                  ctx.strokeStyle = theme.guide;
+                  ctx.lineWidth = mm(0.16);
+                  ctx.setLineDash([mm(0.7), mm(0.9)]);
+                  ctx.beginPath();
+                  ctx.moveTo(mm(x), mm(y + cellSize / 2));
+                  ctx.lineTo(mm(x + cellSize), mm(y + cellSize / 2));
+                  ctx.stroke();
+                } else {
+                  // 輔助虛線
+                  ctx.strokeStyle = theme.guide;
+                  ctx.lineWidth = mm(0.18);
+                  ctx.setLineDash([mm(0.75), mm(0.65)]);
+                  ctx.beginPath();
+
+                  if (
+                    state.gridStyle === 'cross-square' ||
+                    state.gridStyle === 'tian' ||
+                    state.gridStyle === 'mi'
+                  ) {
+                    ctx.moveTo(mm(x + cellSize / 2), mm(y));
+                    ctx.lineTo(mm(x + cellSize / 2), mm(y + cellSize));
+                    ctx.moveTo(mm(x), mm(y + cellSize / 2));
+                    ctx.lineTo(mm(x + cellSize), mm(y + cellSize / 2));
+                  }
+                  if (state.gridStyle === 'mi') {
+                    ctx.moveTo(mm(x), mm(y));
+                    ctx.lineTo(mm(x + cellSize), mm(y + cellSize));
+                    ctx.moveTo(mm(x + cellSize), mm(y));
+                    ctx.lineTo(mm(x), mm(y + cellSize));
+                  }
+                  if (state.gridStyle === 'jiugong') {
+                    const t1 = cellSize / 3;
+                    const t2 = (cellSize * 2) / 3;
+                    ctx.moveTo(mm(x + t1), mm(y));
+                    ctx.lineTo(mm(x + t1), mm(y + cellSize));
+                    ctx.moveTo(mm(x + t2), mm(y));
+                    ctx.lineTo(mm(x + t2), mm(y + cellSize));
+                    ctx.moveTo(mm(x), mm(y + t1));
+                    ctx.lineTo(mm(x + cellSize), mm(y + t1));
+                    ctx.moveTo(mm(x), mm(y + t2));
+                    ctx.lineTo(mm(x + cellSize), mm(y + t2));
+                  }
+                  ctx.stroke();
+
+                  // 外框實線
+                  ctx.strokeStyle = theme.primary;
+                  ctx.lineWidth = mm(0.32);
+                  ctx.setLineDash([]);
+                  ctx.strokeRect(mm(x), mm(y), mm(cellSize), mm(cellSize));
+                }
+                ctx.restore();
+              }
+
+              // 繪製文字
+              if (cellObj.char) {
+                ctx.save();
+                ctx.globalAlpha =
+                  cellObj.role === 'model'
+                    ? state.modelOpacity / 100
+                    : state.traceOpacity / 100;
+                ctx.fillStyle = '#18181b';
+                ctx.font = `400 ${mm(fontSizeMm)}px ${fontFamily}`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(
+                  cellObj.char,
+                  mm(x + cellSize / 2),
+                  mm(y + cellSize / 2 + fontSizeMm * 0.04)
+                );
+                ctx.restore();
+              }
+            });
+
+            cursorY += cellSize + pageData.rowGap;
+          });
+
+          // 5. 繪製頁尾
+          const footerY = pageHMm - padBottom - 2.5;
+          ctx.fillStyle = '#71717a';
+          ctx.font = `400 ${mm(2.8)}px "Noto Sans TC", sans-serif`;
+          ctx.textBaseline = 'top';
+          ctx.textAlign = 'left';
+          ctx.fillText(
+            `格距 ${state.cellSize}mm · 靜心運筆，注重間架平衡`,
+            mm(padLR),
+            mm(footerY)
+          );
+
+          if (state.showPageNum) {
+            ctx.textAlign = 'right';
+            ctx.fillText(
+              `第 ${pageData.pageNumber} 頁 / 共 ${state.renderedPages.length} 頁`,
+              mm(pageWMm - padLR),
+              mm(footerY)
+            );
+          }
+
+          // 下載檔案
+          const dataUrl = canvas.toDataURL('image/png');
+          const link = document.createElement('a');
+          link.download = `硬筆字帖_第${pageNumber}頁.png`;
+          link.href = dataUrl;
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+
+          showToast(`已成功匯出「硬筆字帖_第${pageNumber}頁.png」`, 'success');
+        } catch (err) {
+          console.error(err);
+          showToast('匯出圖片時發生錯誤，請稍後再試', 'error');
+        } finally {
+          el.exportPngBtn.disabled = false;
+        }
+      }
+
+      // ==================== 10. 事件綁定與互動邏輯 ====================
+      function bindEvents() {
+        // 字體切換
+        el.fontSelect.addEventListener('change', (e) => {
+          state.fontKey = e.target.value;
+          updateFontStatus();
+          renderWorkbook();
+        });
+
+        // 本地字體上傳
+        el.customFontInput.addEventListener('change', async (e) => {
+          const file = e.target.files && e.target.files[0];
+          if (!file) return;
+
+          try {
+            showToast(`正在載入字體「${file.name}」...`);
+            const buffer = await file.arrayBuffer();
+            const safeFamily = `UserCustomFont_${Date.now()}`;
+            const fontFace = new FontFace(safeFamily, buffer);
+            await fontFace.load();
+            document.fonts.add(fontFace);
+
+            const key = safeFamily;
+            state.customFonts[key] = { name: file.name, family: safeFamily };
+            state.fontKey = key;
+
+            // 加入或更新下拉選單選項
+            const opt = document.createElement('option');
+            opt.value = key;
+            opt.textContent = `自訂字體 · ${file.name}`;
+            el.fontSelect.insertBefore(opt, el.fontSelect.firstChild);
+            el.fontSelect.value = key;
+
+            el.customFontFilename.textContent = `已載入本地字體：${file.name}`;
+            el.customFontFilename.classList.remove('hidden');
+
+            updateFontStatus();
+            renderWorkbook();
+            showToast(`已成功套用字體「${file.name}」`, 'success');
+          } catch (err) {
+            console.error(err);
+            showToast('無法解析此字體檔案，請確認格式為 .ttf / .otf / .woff2', 'error');
+          } finally {
+            e.target.value = '';
+          }
+        });
+
+        // 預設範文載入
+        el.presetSelect.addEventListener('change', (e) => {
+          const preset = PRESETS[e.target.value];
+          if (!preset) return;
+          state.text = preset.text;
+          state.headerTitle = preset.title;
+          el.practiceText.value = preset.text;
+          el.headerTitleInput.value = preset.title;
+          renderWorkbook();
+          showToast('已載入預設範文');
+        });
+
+        // 自由輸入練字內容
+        el.practiceText.addEventListener('input', (e) => {
+          state.text = e.target.value;
+          renderWorkbook();
+        });
+
+        el.clearTextBtn.addEventListener('click', () => {
+          state.text = '';
+          el.practiceText.value = '';
+          renderWorkbook();
+          showToast('已清空文字，切換為空白練字格');
+        });
+
+        // 標點符號處理選項
+        document.querySelectorAll('input[name="punct-mode"]').forEach((radio) => {
+          radio.addEventListener('change', (e) => {
+            state.punctMode = e.target.value;
+            renderWorkbook();
+          });
+        });
+
+        // 6 種格線樣式切換
+        el.gridStyleBtns.forEach((btn) => {
+          btn.addEventListener('click', () => {
+            el.gridStyleBtns.forEach((b) => {
+              b.classList.remove('active', 'border-stone-800', 'bg-stone-800', 'text-white');
+              b.classList.add('border-stone-200', 'bg-stone-50', 'text-stone-700');
+            });
+            btn.classList.add('active', 'border-stone-800', 'bg-stone-800', 'text-white');
+            btn.classList.remove('border-stone-200', 'bg-stone-50', 'text-stone-700');
+
+            state.gridStyle = btn.dataset.grid;
+            renderWorkbook();
+          });
+        });
+
+        // 雙排版模式切換
+        el.modeParagraphBtn.addEventListener('click', () => {
+          state.layoutMode = 'paragraph';
+          el.modeParagraphBtn.className =
+            'py-1.5 px-2 rounded-md text-xs font-medium bg-white text-stone-800 shadow-2xs transition cursor-pointer';
+          el.modeSingleBtn.className =
+            'py-1.5 px-2 rounded-md text-xs font-medium text-stone-600 hover:text-stone-900 transition cursor-pointer';
+          el.paragraphSubcontrols.classList.remove('hidden');
+          el.singleSubcontrols.classList.add('hidden');
+          renderWorkbook();
+        });
+
+        el.modeSingleBtn.addEventListener('click', () => {
+          state.layoutMode = 'single';
+          el.modeSingleBtn.className =
+            'py-1.5 px-2 rounded-md text-xs font-medium bg-white text-stone-800 shadow-2xs transition cursor-pointer';
+          el.modeParagraphBtn.className =
+            'py-1.5 px-2 rounded-md text-xs font-medium text-stone-600 hover:text-stone-900 transition cursor-pointer';
+          el.singleSubcontrols.classList.remove('hidden');
+          el.paragraphSubcontrols.classList.add('hidden');
+          renderWorkbook();
+        });
+
+        // 段落模式節奏選項
+        document.querySelectorAll('input[name="para-rhythm"]').forEach((radio) => {
+          radio.addEventListener('change', (e) => {
+            state.paraRhythm = e.target.value;
+            renderWorkbook();
+          });
+        });
+
+        // 單字精練描紅格數滑桿
+        el.singleTraceSlider.addEventListener('input', (e) => {
+          const val = parseInt(e.target.value, 10);
+          state.singleTraceCount = val;
+          el.singleTraceLabel.textContent = `${val} 格描紅`;
+          el.singleTraceDesc.textContent = String(val);
+          renderWorkbook();
+        });
+
+        // 格線顏色色票
+        el.colorSwatches.forEach((swatch) => {
+          swatch.addEventListener('click', () => {
+            el.colorSwatches.forEach((s) => {
+              s.classList.remove('active', 'border-stone-800', 'ring-2', 'ring-stone-300');
+              s.classList.add('border-white');
+            });
+            swatch.classList.add('active', 'border-stone-800', 'ring-2', 'ring-stone-300');
+            swatch.classList.remove('border-white');
+
+            state.colorTheme = swatch.dataset.color;
+            el.colorThemeName.textContent = swatch.dataset.name;
+            renderWorkbook();
+          });
+        });
+
+        // 尺寸與透明度滑桿
+        el.cellSizeSlider.addEventListener('input', (e) => {
+          state.cellSize = parseFloat(e.target.value);
+          el.cellSizeVal.textContent = `${state.cellSize.toFixed(1)} mm`;
+          renderWorkbook();
+        });
+
+        el.fontRatioSlider.addEventListener('input', (e) => {
+          state.fontRatio = parseInt(e.target.value, 10);
+          el.fontRatioVal.textContent = `${state.fontRatio}%`;
+          renderWorkbook();
+        });
+
+        el.traceOpacitySlider.addEventListener('input', (e) => {
+          state.traceOpacity = parseInt(e.target.value, 10);
+          el.traceOpacityVal.textContent = `${state.traceOpacity}%`;
+          renderWorkbook();
+        });
+
+        el.modelOpacitySlider.addEventListener('input', (e) => {
+          state.modelOpacity = parseInt(e.target.value, 10);
+          el.modelOpacityVal.textContent = `${state.modelOpacity}%`;
+          renderWorkbook();
+        });
+
+        // A4 直式 / 橫式切換
+        el.orientPortraitBtn.addEventListener('click', () => {
+          state.orientation = 'portrait';
+          el.orientPortraitBtn.className =
+            'px-2.5 py-1 rounded-md bg-white text-stone-800 font-medium shadow-2xs transition cursor-pointer';
+          el.orientLandscapeBtn.className =
+            'px-2.5 py-1 rounded-md text-stone-600 hover:text-stone-900 font-medium transition cursor-pointer';
+          el.dynamicPageOrientation.textContent = '@page { size: A4 portrait; margin: 0; }';
+          renderWorkbook();
+          if (window.innerWidth < 1024) fitZoomToContainer();
+        });
+
+        el.orientLandscapeBtn.addEventListener('click', () => {
+          state.orientation = 'landscape';
+          el.orientLandscapeBtn.className =
+            'px-2.5 py-1 rounded-md bg-white text-stone-800 font-medium shadow-2xs transition cursor-pointer';
+          el.orientPortraitBtn.className =
+            'px-2.5 py-1 rounded-md text-stone-600 hover:text-stone-900 font-medium transition cursor-pointer';
+          el.dynamicPageOrientation.textContent = '@page { size: A4 landscape; margin: 0; }';
+          renderWorkbook();
+          if (window.innerWidth < 1024) fitZoomToContainer();
+        });
+
+        // 頁首標題與頁碼設定
+        el.headerTitleInput.addEventListener('input', (e) => {
+          state.headerTitle = e.target.value;
+          renderWorkbook();
+        });
+
+        el.headerSubtitleInput.addEventListener('input', (e) => {
+          state.headerSubtitle = e.target.value;
+          renderWorkbook();
+        });
+
+        el.showSubtitleChk.addEventListener('change', (e) => {
+          state.showSubtitle = e.target.checked;
+          renderWorkbook();
+        });
+
+        el.showPagenumChk.addEventListener('change', (e) => {
+          state.showPageNum = e.target.checked;
+          renderWorkbook();
+        });
+
+        // 縮放控制（桌面與行動版）
+        el.zoomOutBtn.addEventListener('click', () => setZoom(state.zoom - 0.1));
+        el.zoomInBtn.addEventListener('click', () => setZoom(state.zoom + 0.1));
+        el.zoomFitBtn.addEventListener('click', fitZoomToContainer);
+
+        if (el.mobileZoomOut) {
+          el.mobileZoomOut.addEventListener('click', () => setZoom(state.zoom - 0.08));
+          el.mobileZoomIn.addEventListener('click', () => setZoom(state.zoom + 0.08));
+          el.mobileZoomFit.addEventListener('click', fitZoomToContainer);
+        }
+
+        // 行動版「參數設定 / 字帖預覽」切換
+        el.mobileTabSettings.addEventListener('click', () => {
+          el.controlSidebar.classList.remove('hidden');
+          el.previewPane.classList.add('hidden');
+          el.previewPane.classList.remove('flex');
+          el.mobileTabSettings.className =
+            'px-3 py-1.5 rounded-md bg-white text-stone-800 shadow-xs transition';
+          el.mobileTabPreview.className =
+            'px-3 py-1.5 rounded-md text-stone-600 hover:text-stone-900 transition';
+        });
+
+        el.mobileTabPreview.addEventListener('click', () => {
+          el.controlSidebar.classList.add('hidden');
+          el.previewPane.classList.remove('hidden');
+          el.previewPane.classList.add('flex');
+          el.mobileTabPreview.className =
+            'px-3 py-1.5 rounded-md bg-white text-stone-800 shadow-xs transition';
+          el.mobileTabSettings.className =
+            'px-3 py-1.5 rounded-md text-stone-600 hover:text-stone-900 transition';
+          requestAnimationFrame(fitZoomToContainer);
+        });
+
+        // 列印 / 另存 PDF
+        el.printPdfBtn.addEventListener('click', () => {
+          window.print();
+        });
+
+        // 匯出當前頁為 PNG
+        el.exportPngBtn.addEventListener('click', () => {
+          const pageNum = parseInt(el.pngPageSelect.value, 10) || 1;
+          exportPageAsPng(pageNum);
+        });
+
+        // 視窗尺寸改變時自動調整行動版縮放
+        window.addEventListener('resize', () => {
+          if (window.innerWidth >= 1024) {
+            el.controlSidebar.classList.remove('hidden');
+            el.previewPane.classList.remove('hidden');
+            el.previewPane.classList.add('flex');
+          }
+          requestAnimationFrame(syncZoomWrapperBounds);
+        });
+      }
+
+      // ==================== 11. 初始化啟動 ====================
+      function init() {
+        bindEvents();
+        updateFontStatus();
+        renderWorkbook();
+
+        // 依螢幕寬度設定初始最佳縮放比例
+        if (window.innerWidth < 1280) {
+          fitZoomToContainer();
+        } else {
+          setZoom(0.82);
+        }
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+      } else {
+        init();
+      }
+    })();
+  </script>
+</body>
+</html>
